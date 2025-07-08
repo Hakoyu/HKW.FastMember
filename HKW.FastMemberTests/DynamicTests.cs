@@ -1,12 +1,12 @@
-﻿using Microsoft.CSharp.RuntimeBinder;
-using System.Dynamic;
-using Xunit;
+﻿using System.Dynamic;
+using Microsoft.CSharp.RuntimeBinder;
 
 namespace HKW.FastMember.Tests;
 
+[TestClass]
 public class DynamicTests
 {
-    [Fact]
+    [TestMethod]
     public void TestReadValid()
     {
         dynamic expando = new ExpandoObject();
@@ -14,22 +14,22 @@ public class DynamicTests
         expando.B = "def";
         var wrap = ObjectAccessor.Create((object)expando);
 
-        Assert.Equal(123, wrap["A"]);
-        Assert.Equal("def", wrap["B"]);
+        Assert.AreEqual(123, wrap["A"]);
+        Assert.AreEqual("def", wrap["B"]);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestReadInvalid()
     {
-        Assert.Throws<RuntimeBinderException>(() =>
+        Assert.ThrowsException<RuntimeBinderException>(() =>
         {
             dynamic expando = new ExpandoObject();
             var wrap = ObjectAccessor.Create((object)expando);
-            Assert.Equal(123, wrap["C"]);
+            Assert.AreEqual(123, wrap["C"]);
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void TestWrite()
     {
         dynamic expando = new ExpandoObject();
@@ -37,20 +37,20 @@ public class DynamicTests
         wrap["A"] = 123;
         wrap["B"] = "def";
 
-        Assert.Equal(123, expando.A);
-        Assert.Equal("def", expando.B);
+        Assert.AreEqual(123, expando.A);
+        Assert.AreEqual("def", expando.B);
     }
 
-    [Fact]
+    [TestMethod]
     public void DynamicByTypeWrapper()
     {
         var obj = new ExpandoObject();
         ((dynamic)obj).Foo = "bar";
         var accessor = TypeAccessor.Create(obj.GetType());
 
-        Assert.Equal("bar", accessor[obj, "Foo"]);
+        Assert.AreEqual("bar", accessor[obj, "Foo"]);
         accessor[obj, "Foo"] = "BAR";
         string result = ((dynamic)obj).Foo;
-        Assert.Equal("BAR", result);
+        Assert.AreEqual("BAR", result);
     }
 }

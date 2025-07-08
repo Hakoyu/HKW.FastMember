@@ -11,11 +11,14 @@ using System.Threading.Tasks;
 namespace HKW.FastMember;
 
 /// <summary>
-/// Provides a means of reading a sequence of objects as a data-reader, for example
-/// for use with SqlBulkCopy or other data-base oriented code
+/// 提供一种将对象序列作为数据读取器进行读取的方法
+/// 例如: 用于SqlBulkCopy或其他面向数据库的代码
 /// </summary>
 public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenerator
 {
+    /// <summary>
+    /// 深度
+    /// </summary>
     public override int Depth => 0;
 
     private readonly TypeAccessor _accessor;
@@ -23,129 +26,85 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     private readonly Type[] _effectiveTypes;
     private readonly BitArray _allowNull;
 
-    protected object _current;
-
-    private sealed class SyncObjectReader : ObjectReader
-    {
-        private IEnumerator source;
-
-        internal SyncObjectReader(Type type, IEnumerable source, string[] members)
-            : base(type, members)
-        {
-            if (source == null)
-                throw new ArgumentOutOfRangeException(nameof(source));
-
-            this.source = source.GetEnumerator();
-        }
-
-        protected override void Shutdown()
-        {
-            base.Shutdown();
-            var tmp = source as IDisposable;
-            source = null;
-            if (tmp != null)
-                tmp.Dispose();
-        }
-
-        public override bool IsClosed => source == null;
-
-        public override bool Read()
-        {
-            if (active)
-            {
-                var tmp = source;
-                if (tmp != null && tmp.MoveNext())
-                {
-                    _current = tmp.Current;
-                    return true;
-                }
-                else
-                {
-                    active = false;
-                }
-            }
-            _current = null;
-            return false;
-        }
-    }
+    /// <summary>
+    /// 当前对象
+    /// </summary>
+    protected object? _current;
 
     /// <summary>
-    /// Creates a new ObjectReader instance for reading the supplied data
+    /// 创建一个新的ObjectReader实例，用于读取提供的数据
     /// </summary>
-    /// <param name="source">The sequence of objects to represent</param>
-    /// <param name="members">The members that should be exposed to the reader</param>
+    /// <param name="source">要表示的对象序列</param>
+    /// <param name="members">应该暴露给读取器的成员</param>
     public static ObjectReader Create<T>(IEnumerable<T> source, params string[] members) =>
         new SyncObjectReader(typeof(T), source, members);
 
     /// <summary>
-    /// Creates a new ObjectReader instance for reading the supplied data
+    /// 创建一个新的ObjectReader实例，用于读取提供的数据
     /// </summary>
-    /// <param name="type">The expected Type of the information to be read</param>
-    /// <param name="source">The sequence of objects to represent</param>
-    /// <param name="members">The members that should be exposed to the reader</param>
+    /// <param name="type">要读取的信息的预期类型</param>
+    /// <param name="members">应该暴露给读取器的成员</param>
     internal ObjectReader(Type type, params string[] members)
     {
-        bool allMembers = members == null || members.Length == 0;
+        var isEmptyMembers = members is null || members.Length == 0;
 
-        this._accessor = TypeAccessor.Create(type);
-        if (_accessor.GetMembersSupported)
-        {
-            // Sort members by ordinal first and then by name.
-            var typeMembers = this._accessor.GetMembers().OrderBy(p => p.Ordinal).ToList();
-
-            if (allMembers)
-            {
-                members = new string[typeMembers.Count];
-                for (int i = 0; i < members.Length; i++)
-                {
-                    members[i] = typeMembers[i].Name;
-                }
-            }
-
-            this._allowNull = new BitArray(members.Length);
-            this._effectiveTypes = new Type[members.Length];
-            for (int i = 0; i < members.Length; i++)
-            {
-                Type memberType = null;
-                bool allowNull = true;
-                string hunt = members[i];
-                foreach (var member in typeMembers)
-                {
-                    if (member.Name == hunt)
-                    {
-                        if (memberType == null)
-                        {
-                            var tmp = member.Type;
-                            memberType = Nullable.GetUnderlyingType(tmp) ?? tmp;
-
-                            allowNull = !(memberType.IsValueType && memberType == tmp);
-
-                            // but keep checking, in case of duplicates
-                        }
-                        else
-                        {
-                            memberType = null; // duplicate found; say nothing
-                            break;
-                        }
-                    }
-                }
-                this._allowNull[i] = allowNull;
-                this._effectiveTypes[i] = memberType ?? typeof(object);
-            }
-        }
-        else if (allMembers)
+        _accessor = TypeAccessor.Create(type);
+        if (_accessor.GetMembersSupported is false && isEmptyMembers)
         {
             throw new InvalidOperationException(
                 "Member information is not available for this type; the required members must be specified explicitly"
             );
         }
+        // 按序号首先排序成员，然后按名称排序。
+        var typeMembers = _accessor.GetMembers().OrderBy(p => p.Ordinal).ToList();
 
-        this._current = null;
-        this._memberNames = (string[])members.Clone();
+        if (isEmptyMembers)
+        {
+            members = new string[typeMembers.Count];
+            for (int i = 0; i < members.Length; i++)
+            {
+                members[i] = typeMembers[i].Name;
+            }
+        }
+
+        _allowNull = new BitArray(members!.Length);
+        _effectiveTypes = new Type[members.Length];
+        for (var i = 0; i < members.Length; i++)
+        {
+            Type? memberType = null;
+            var allowNull = true;
+            var hunt = members[i];
+            foreach (var member in typeMembers)
+            {
+                if (member.Name == hunt)
+                {
+                    if (memberType == null)
+                    {
+                        var tmp = member.Type;
+                        memberType = Nullable.GetUnderlyingType(tmp) ?? tmp;
+
+                        allowNull = !(memberType.IsValueType && memberType == tmp);
+
+                        // 继续检查, 防止重复
+                    }
+                    else
+                    {
+                        // 如果重复则忽视
+                        memberType = null;
+                        break;
+                    }
+                }
+            }
+            _allowNull[i] = allowNull;
+            _effectiveTypes[i] = memberType ?? typeof(object);
+        }
+
+        _current = null;
+        _memberNames = [.. members];
     }
 
 #if !NETFRAMEWORK
-    private ReadOnlyCollection<DbColumn> _columnSchema;
+    private ReadOnlyCollection<DbColumn>? _columnSchema;
 
     private ReadOnlyCollection<DbColumn> BuildColumnSchema()
     {
@@ -178,23 +137,23 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
         _columnSchema ?? BuildColumnSchema();
 #endif
 
+    /// <inheritdoc />
     public override DataTable GetSchemaTable()
     {
-        // these are the columns used by DataTable load
-        DataTable table =
-            new()
+        // 这些是DataTable加载使用的列
+        var table = new DataTable()
+        {
+            Columns =
             {
-                Columns =
-                {
-                    { "ColumnOrdinal", typeof(int) },
-                    { "ColumnName", typeof(string) },
-                    { "DataType", typeof(Type) },
-                    { "ColumnSize", typeof(int) },
-                    { "AllowDBNull", typeof(bool) }
-                }
-            };
-        object[] rowData = new object[5];
-        for (int i = 0; i < _memberNames.Length; i++)
+                { "ColumnOrdinal", typeof(int) },
+                { "ColumnName", typeof(string) },
+                { "DataType", typeof(Type) },
+                { "ColumnSize", typeof(int) },
+                { "AllowDBNull", typeof(bool) }
+            }
+        };
+        var rowData = new object[5];
+        for (var i = 0; i < _memberNames.Length; i++)
         {
             rowData[0] = i;
             rowData[1] = _memberNames[i];
@@ -206,28 +165,27 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
         return table;
     }
 
+    /// <inheritdoc/>
     public override void Close()
     {
         Shutdown();
     }
 
-    public override bool HasRows
-    {
-        get { return active; }
-    }
+    /// <inheritdoc/>
+    public override bool HasRows => active;
     private bool active = true;
 
+    /// <inheritdoc/>
     public override bool NextResult()
     {
         active = false;
         return false;
     }
 
-    public override int RecordsAffected
-    {
-        get { return 0; }
-    }
+    /// <inheritdoc/>
+    public override int RecordsAffected => 0;
 
+    /// <inheritdoc/>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
@@ -235,173 +193,230 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
             Shutdown();
     }
 
+    /// <summary>
+    /// 关闭读取器并释放资源
+    /// </summary>
     protected virtual void Shutdown()
     {
         active = false;
         _current = null;
     }
 
-    public override int FieldCount
-    {
-        get { return _memberNames.Length; }
-    }
+    /// <inheritdoc/>
+    public override int FieldCount => _memberNames.Length;
 
-    public override bool GetBoolean(int i)
-    {
-        return (bool)this[i];
-    }
+    /// <inheritdoc/>
+    public override bool GetBoolean(int ordinal) => (bool)this[ordinal]!;
 
-    public override byte GetByte(int i)
-    {
-        return (byte)this[i];
-    }
+    /// <inheritdoc/>
+    public override byte GetByte(int ordinal) => (byte)this[ordinal]!;
 
+    /// <inheritdoc/>
     public override long GetBytes(
         int i,
         long fieldOffset,
-        byte[] buffer,
+        byte[]? buffer,
         int bufferoffset,
         int length
     )
     {
-        byte[] s = (byte[])this[i];
+        byte[] s = (byte[])this[i]!;
         int available = s.Length - (int)fieldOffset;
         if (available <= 0)
             return 0;
 
         int count = Math.Min(length, available);
-        Buffer.BlockCopy(s, (int)fieldOffset, buffer, bufferoffset, count);
+        Buffer.BlockCopy(s, (int)fieldOffset, buffer!, bufferoffset, count);
         return count;
     }
 
-    public override char GetChar(int i)
-    {
-        return (char)this[i];
-    }
+    /// <inheritdoc/>
+    public override char GetChar(int ordinal) => (char)this[ordinal]!;
 
+    /// <inheritdoc/>
     public override long GetChars(
         int i,
         long fieldoffset,
-        char[] buffer,
+        char[]? buffer,
         int bufferoffset,
         int length
     )
     {
-        string s = (string)this[i];
+        string s = (string)this[i]!;
         int available = s.Length - (int)fieldoffset;
         if (available <= 0)
             return 0;
 
         int count = Math.Min(length, available);
-        s.CopyTo((int)fieldoffset, buffer, bufferoffset, count);
+        s.CopyTo((int)fieldoffset, buffer!, bufferoffset, count);
         return count;
     }
 
+    /// <inheritdoc/>
     protected override DbDataReader GetDbDataReader(int i)
     {
         throw new NotSupportedException();
     }
 
+    /// <inheritdoc/>
     public override string GetDataTypeName(int i)
     {
         return (_effectiveTypes == null ? typeof(object) : _effectiveTypes[i]).Name;
     }
 
+    /// <inheritdoc/>
     public override DateTime GetDateTime(int i)
     {
-        return (DateTime)this[i];
+        return (DateTime)this[i]!;
     }
 
-    public override decimal GetDecimal(int i)
+    /// <inheritdoc/>
+    public override decimal GetDecimal(int ordinal)
     {
-        return (decimal)this[i];
+        return (decimal)this[ordinal]!;
     }
 
-    public override double GetDouble(int i)
+    /// <inheritdoc/>
+    public override double GetDouble(int ordinal)
     {
-        return (double)this[i];
+        return (double)this[ordinal]!;
     }
 
-    public override Type GetFieldType(int i)
+    /// <inheritdoc/>
+    public override Type GetFieldType(int ordinal)
     {
-        return _effectiveTypes == null ? typeof(object) : _effectiveTypes[i];
+        return _effectiveTypes == null ? typeof(object) : _effectiveTypes[ordinal];
     }
 
-    public override float GetFloat(int i)
+    /// <inheritdoc/>
+    public override float GetFloat(int ordinal)
     {
-        return (float)this[i];
+        return (float)this[ordinal]!;
     }
 
-    public override Guid GetGuid(int i)
+    /// <inheritdoc/>
+    public override Guid GetGuid(int ordinal)
     {
-        return (Guid)this[i];
+        return (Guid)this[ordinal]!;
     }
 
-    public override short GetInt16(int i)
+    /// <inheritdoc/>
+    public override short GetInt16(int ordinal)
     {
-        return (short)this[i];
+        return (short)this[ordinal];
     }
 
-    public override int GetInt32(int i)
+    /// <inheritdoc/>
+    public override int GetInt32(int ordinal)
     {
-        return (int)this[i];
+        return (int)this[ordinal]!;
     }
 
-    public override long GetInt64(int i)
+    /// <inheritdoc/>
+    public override long GetInt64(int ordinal)
     {
-        return (long)this[i];
+        return (long)this[ordinal]!;
     }
 
-    public override string GetName(int i)
+    /// <inheritdoc/>
+    public override string GetName(int ordinal)
     {
-        return _memberNames[i];
+        return _memberNames[ordinal];
     }
 
+    /// <inheritdoc/>
     public override int GetOrdinal(string name)
     {
         return Array.IndexOf(_memberNames, name);
     }
 
-    public override string GetString(int i)
+    /// <inheritdoc/>
+    public override string GetString(int ordinal)
     {
-        return (string)this[i];
+        return (string)this[ordinal]!;
     }
 
-    public override object GetValue(int i)
+    /// <inheritdoc/>
+    public override object GetValue(int ordinal)
     {
-        return this[i];
+        return this[ordinal]!;
     }
 
+    /// <inheritdoc/>
     public override IEnumerator GetEnumerator() => new DbEnumerator(this);
 
+    /// <inheritdoc/>
     public override int GetValues(object[] values)
     {
-        // duplicate the key fields on the stack
-        var members = this._memberNames;
-        var current = this._current;
-        var accessor = this._accessor;
+        // 在堆栈上复制关键字段
+        var members = _memberNames;
+        var current = _current;
+        var accessor = _accessor;
 
         int count = Math.Min(values.Length, members.Length);
         for (int i = 0; i < count; i++)
-            values[i] = accessor[current, members[i]] ?? DBNull.Value;
+            values[i] = accessor[current!, members[i]] ?? DBNull.Value;
         return count;
     }
 
-    public override bool IsDBNull(int i)
+    /// <inheritdoc/>
+    public override bool IsDBNull(int ordinal)
     {
-        return this[i] is DBNull;
-    }
-
-    public override object this[string name]
-    {
-        get { return _accessor[_current, name] ?? DBNull.Value; }
+        return this[ordinal] is DBNull;
     }
 
     /// <summary>
-    /// Gets the value of the current object in the member specified
+    /// 获取指定成员中当前对象的值
     /// </summary>
-    public override object this[int i]
+    public override object this[string name] => _accessor[_current!, name] ?? DBNull.Value;
+
+    /// <summary>
+    /// 获取指定索引处的成员值
+    /// </summary>
+    /// <param name="i">索引</param>
+    /// <returns>成员值</returns>
+    public override object this[int i] => _accessor[_current!, _memberNames[i]] ?? DBNull.Value;
+
+    private sealed class SyncObjectReader : ObjectReader
     {
-        get { return _accessor[_current, _memberNames[i]] ?? DBNull.Value; }
+        private IEnumerator? _source;
+
+        internal SyncObjectReader(Type type, IEnumerable source, string[] members)
+            : base(type, members)
+        {
+            if (source == null)
+                throw new ArgumentOutOfRangeException(nameof(source));
+
+            _source = source.GetEnumerator();
+        }
+
+        protected override void Shutdown()
+        {
+            base.Shutdown();
+            var tmp = _source as IDisposable;
+            _source = null;
+            tmp?.Dispose();
+        }
+
+        public override bool IsClosed => _source == null;
+
+        public override bool Read()
+        {
+            if (active)
+            {
+                var tmp = _source;
+                if (tmp != null && tmp.MoveNext())
+                {
+                    _current = tmp.Current;
+                    return true;
+                }
+                else
+                {
+                    active = false;
+                }
+            }
+            _current = null;
+            return false;
+        }
     }
 }

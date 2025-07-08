@@ -3,41 +3,49 @@
 namespace HKW.FastMember;
 
 /// <summary>
-/// Represents an individual object, allowing access to members by-name
+/// 表示单个对象，允许通过名称访问成员
 /// </summary>
 public abstract class ObjectAccessor<T>
 {
+    /// <inheritdoc/>
+    protected ObjectAccessor(T source)
+    {
+        Source = source ?? throw new ArgumentNullException(nameof(source));
+    }
+
     /// <summary>
-    /// Get or Set the value of a named member for the underlying object
+    /// 获取或设置基础对象的指定名称成员的值
     /// </summary>
     public abstract object this[string name] { get; set; }
 
     /// <summary>
-    /// The object represented by this instance
+    /// 此实例所代表的对象
     /// </summary>
-    public T Target { get; protected set; }
+    public object Source { get; protected set; }
 
     #region Create
     /// <summary>
-    /// Wraps an individual object, allowing by-name access to that instance
+    /// 为对象创建访问器
     /// </summary>
-    public static ObjectAccessor<T> Create(T target)
+    /// <param name="source">对象</param>
+    /// <returns>访问器</returns>
+    public static ObjectAccessor Create(T source)
     {
-        return Create(target, false);
+        return Create(source, false);
     }
 
     /// <summary>
-    /// Wraps an individual object, allowing by-name access to that instance
+    /// 包装单个对象，允许通过名称访问该实例
     /// </summary>
-    /// <exception cref="ArgumentNullException">target null</exception>
-    public static ObjectAccessor<T> Create(T target, bool allowNonPublicAccessors)
+    /// <exception cref="ArgumentNullException">目标为空</exception>
+    public static ObjectAccessor Create(T source, bool allowNonPublicAccessors)
     {
-        ArgumentNullException.ThrowIfNull(target, nameof(target));
-        if (target is IDynamicMetaObjectProvider)
-            return new DynamicWrapper<T>(target); // use the DLR
-        return new TypeAccessorWrapper<T>(
-            target,
-            TypeAccessor.Create(target.GetType(), allowNonPublicAccessors)
+        ArgumentNullException.ThrowIfNull(source, nameof(source));
+        if (source is IDynamicMetaObjectProvider dlr)
+            return new DynamicWrapper(dlr); // 使用DLR
+        return new TypeAccessorWrapper(
+            source,
+            TypeAccessor.Create(source.GetType(), allowNonPublicAccessors)
         );
     }
     #endregion
@@ -62,33 +70,30 @@ public abstract class ObjectAccessor<T>
     /// <param name="newValue">新值</param>
     public void SetValue<TValue>(string name, TValue newValue)
     {
-        this[name] = newValue;
+        this[name] = newValue!;
     }
     #endregion
 
     #region Other
-    /// <summary>
-    /// Use the target types definition of equality
-    /// </summary>
-    public override bool Equals(object obj)
+
+    /// <inheritdoc/>
+    public override bool Equals(object? obj)
     {
-        return Target.Equals(obj);
+        return Source.Equals(obj);
     }
 
     /// <summary>
-    /// Obtain the hash of the target object
+    /// 获取目标对象的哈希值
     /// </summary>
     public override int GetHashCode()
     {
-        return Target.GetHashCode();
+        return Source.GetHashCode();
     }
 
-    /// <summary>
-    /// Use the target's definition of a string representation
-    /// </summary>
+    /// <inheritdoc/>
     public override string ToString()
     {
-        return Target.ToString();
+        return Source.ToString()!;
     }
     #endregion
 }
@@ -97,29 +102,28 @@ internal sealed class TypeAccessorWrapper<T> : ObjectAccessor<T>
 {
     private readonly TypeAccessor _accessor;
 
-    public TypeAccessorWrapper(T target, TypeAccessor accessor)
+    public TypeAccessorWrapper(T source, TypeAccessor accessor)
+        : base(source)
     {
-        Target = target;
         _accessor = accessor;
     }
 
     public override object this[string name]
     {
-        get => _accessor[Target, name];
-        set => _accessor[Target, name] = value;
+        get => _accessor[Source, name];
+        set => _accessor[Source, name] = value;
     }
 }
 
 internal sealed class DynamicWrapper<T> : ObjectAccessor<T>
+    where T : IDynamicMetaObjectProvider
 {
-    public DynamicWrapper(T target)
-    {
-        Target = target;
-    }
+    public DynamicWrapper(T source)
+        : base(source) { }
 
     public override object this[string name]
     {
-        get => CallSiteCache.GetValue(name, Target);
-        set => CallSiteCache.SetValue(name, Target, value);
+        get => CallSiteCache.GetValue(name, Source);
+        set => CallSiteCache.SetValue(name, Source, value);
     }
 }

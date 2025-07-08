@@ -57,20 +57,20 @@ public abstract class ChainingPropertyDescriptor : PropertyDescriptor
         get { return Root.DisplayName; }
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return Root.Equals(obj);
     }
 
     public override PropertyDescriptorCollection GetChildProperties(
-        object instance,
-        Attribute[] filter
+        object? instance,
+        Attribute[]? filter
     )
     {
         return Root.GetChildProperties(instance, filter);
     }
 
-    public override object GetEditor(Type editorBaseType)
+    public override object? GetEditor(Type editorBaseType)
     {
         return Root.GetEditor(editorBaseType);
     }
@@ -80,7 +80,7 @@ public abstract class ChainingPropertyDescriptor : PropertyDescriptor
         return Root.GetHashCode();
     }
 
-    public override object GetValue(object component)
+    public override object? GetValue(object? component)
     {
         return Root.GetValue(component);
     }
@@ -116,7 +116,7 @@ public abstract class ChainingPropertyDescriptor : PropertyDescriptor
         Root.ResetValue(component);
     }
 
-    public override void SetValue(object component, object value)
+    public override void SetValue(object? component, object? value)
     {
         Root.SetValue(component, value);
     }
@@ -133,6 +133,6 @@ public abstract class ChainingPropertyDescriptor : PropertyDescriptor
 
     public override string ToString()
     {
-        return Root.ToString();
+        return Root.ToString()!;
     }
 }

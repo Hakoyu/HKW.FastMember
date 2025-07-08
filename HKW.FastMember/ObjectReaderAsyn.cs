@@ -7,17 +7,17 @@ using System.Threading.Tasks;
 namespace HKW.FastMember;
 
 /// <summary>
-/// Provides a means of reading a sequence of objects as a data-reader, for example
-/// for use with SqlBulkCopy or other data-base oriented code
+/// 提供一种将对象序列作为数据读取器进行读取的方法
+/// 例如：用于SqlBulkCopy或其他面向数据库的代码
 /// </summary>
 public abstract partial class ObjectReader : DbDataReader
 {
-    static readonly Task<bool> s_True = Task.FromResult(true),
-        s_False = Task.FromResult(false);
+    static readonly Task<bool> _trueTaskResult = Task.FromResult(true);
+    static readonly Task<bool> _falseTaskResult = Task.FromResult(false);
 
     private sealed class AsyncObjectReader<T> : ObjectReader, IAsyncDisposable
     {
-        private IAsyncEnumerator<T> source;
+        private IAsyncEnumerator<T>? _source;
 
         internal AsyncObjectReader(
             Type type,
@@ -31,42 +31,42 @@ public abstract partial class ObjectReader : DbDataReader
                 throw new ArgumentOutOfRangeException(nameof(source));
 
             cancellationToken.ThrowIfCancellationRequested();
-            this.source = source.GetAsyncEnumerator(cancellationToken);
+            _source = source.GetAsyncEnumerator(cancellationToken);
         }
 
         ValueTask IAsyncDisposable.DisposeAsync()
         {
             base.Shutdown();
-            var tmp = source;
+            var tmp = _source;
             return tmp?.DisposeAsync() ?? default;
         }
 
         protected override void Shutdown()
         {
             base.Shutdown();
-            var tmp = source;
-            source = null;
+            var tmp = _source;
+            _source = null!;
             tmp?.DisposeAsync().AsTask().Wait();
         }
 
-        public override bool IsClosed => source == null;
+        public override bool IsClosed => _source == null;
 
         public override Task<bool> ReadAsync(CancellationToken cancellationToken)
         {
-            static async Task<bool> FromAsync(AsyncObjectReader<T> source, ValueTask<bool> pending)
+            static async Task<bool> FromAsync(AsyncObjectReader<T> reader, ValueTask<bool> pending)
             {
                 if (await pending.ConfigureAwait(false))
                 {
-                    source._current = source.source.Current;
+                    reader._current = reader._source!.Current;
                     return true;
                 }
-                source.active = false;
-                source._current = null;
+                reader.active = false;
+                reader._current = null;
                 return false;
             }
             if (active)
             {
-                var tmp = source;
+                var tmp = _source;
                 if (tmp != null)
                 {
                     var pending = tmp.MoveNextAsync();
@@ -77,7 +77,7 @@ public abstract partial class ObjectReader : DbDataReader
                     if (pending.Result)
                     {
                         _current = tmp.Current;
-                        return s_True;
+                        return _trueTaskResult;
                     }
                     else
                     {
@@ -90,25 +90,29 @@ public abstract partial class ObjectReader : DbDataReader
                 }
             }
             _current = null;
-            return s_False;
+            return _falseTaskResult;
         }
     }
 
-    public override bool Read() => ReadAsync().GetAwaiter().GetResult(); // sync-over-async, self-inflicted
+    /// <inheritdoc/>
+    public override bool Read() => ReadAsync().GetAwaiter().GetResult();
 
     /// <summary>
-    /// Creates a new ObjectReader instance for reading the supplied data
+    /// 创建一个新的ObjectReader实例，用于读取提供的数据
     /// </summary>
-    /// <param name="source">The sequence of objects to represent</param>
-    /// <param name="members">The members that should be exposed to the reader</param>
+    /// <param name="source">要表示的对象序列</param>
+    /// <param name="members">应该暴露给读取器的成员</param>
+    /// <returns>对象读取器</returns>
     public static ObjectReader Create<T>(IAsyncEnumerable<T> source, params string[] members) =>
         new AsyncObjectReader<T>(typeof(T), source, members, CancellationToken.None);
 
     /// <summary>
-    /// Creates a new ObjectReader instance for reading the supplied data
+    /// 创建一个新的ObjectReader实例，用于读取提供的数据
     /// </summary>
-    /// <param name="source">The sequence of objects to represent</param>
-    /// <param name="members">The members that should be exposed to the reader</param>
+    /// <param name="source">要表示的对象序列</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="members">应该暴露给读取器的成员</param>
+    /// <returns>对象读取器</returns>
     public static ObjectReader Create<T>(
         IAsyncEnumerable<T> source,
         CancellationToken cancellationToken,

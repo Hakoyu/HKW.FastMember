@@ -6,30 +6,30 @@ using System.Reflection.Emit;
 namespace HKW.FastMember;
 
 /// <summary>
-/// Provides by-name member-access to objects of a given type
+/// 提供对给定类型对象的按名称成员访问
 /// </summary>
 public abstract class TypeAccessor
 {
     /// <summary>
-    /// Does this type support new instances via a parameterless constructor?
+    /// 此类型是否支持通过无参构造函数创建新实例？
     /// </summary>
     public virtual bool CreateNewSupported => false;
 
     /// <summary>
-    /// Can this type be queried for member availability?
+    /// 此类型是否可以查询成员可用性？
     /// </summary>
     public virtual bool GetMembersSupported => false;
 
-    // hash-table has better read-without-locking semantics than dictionary
+    // 哈希表比字典有更好的无锁读取语义
     private static readonly ConcurrentDictionary<Type, TypeAccessor> _publicAccessors = new(),
         _nonPublicAccessors = new();
 
-    private static AssemblyBuilder _assembly;
-    private static ModuleBuilder _module;
+    private static AssemblyBuilder? _assembly;
+    private static ModuleBuilder? _module;
     private static int _counter;
 
     /// <summary>
-    /// Create a new instance of this type
+    /// 创建此类型的新实例
     /// </summary>
     public virtual object CreateNew()
     {
@@ -37,26 +37,26 @@ public abstract class TypeAccessor
     }
 
     /// <summary>
-    /// Query the members available for this type
+    /// 查询此类型可用的成员
     /// </summary>
-    public virtual MemberSet GetMembers()
+    public virtual Member[] GetMembers()
     {
         throw new NotSupportedException();
     }
 
     /// <summary>
-    /// Provides a type-specific accessor, allowing by-name access for all objects of that type
+    /// 提供类型特定的访问器，允许按名称访问该类型的所有对象
     /// </summary>
-    /// <remarks>The accessor is cached internally; a pre-existing accessor may be returned</remarks>
+    /// <remarks>访问器在内部缓存；可能返回预先存在的访问器</remarks>
     public static TypeAccessor Create(Type type)
     {
         return Create(type, false);
     }
 
     /// <summary>
-    /// Provides a type-specific accessor, allowing by-name access for all objects of that type
+    /// 提供类型特定的访问器，允许按名称访问该类型的所有对象
     /// </summary>
-    /// <remarks>The accessor is cached internally; a pre-existing accessor may be returned</remarks>
+    /// <remarks>访问器在内部缓存；可能返回预先存在的访问器</remarks>
     public static TypeAccessor Create(Type type, bool allowNonPublicAccessors)
     {
         ArgumentNullException.ThrowIfNull(type, nameof(type));
@@ -74,14 +74,14 @@ public abstract class TypeAccessor
     }
 
     static readonly MethodInfo _tryGetValue = typeof(Dictionary<string, int>).GetMethod(
-        "TryGetValue"
-    );
+        nameof(Dictionary<string, int>.TryGetValue)
+    )!;
 
     private static void WriteMapImpl(
         ILGenerator il,
         Type type,
         List<MemberInfo> members,
-        FieldBuilder mapField,
+        FieldBuilder? mapField,
         bool allowNonPublicAccessors,
         bool isGet
     )
@@ -111,7 +111,7 @@ public abstract class TypeAccessor
             il.EmitCall(OpCodes.Callvirt, _tryGetValue, null);
             il.Emit(OpCodes.Brfalse, fail);
         }
-        Label[] labels = new Label[members.Count];
+        var labels = new Label[members.Count];
         for (int i = 0; i < labels.Length; i++)
         {
             labels[i] = il.DefineLabel();
@@ -122,10 +122,10 @@ public abstract class TypeAccessor
         il.Emit(OpCodes.Ldstr, "name");
         il.Emit(
             OpCodes.Newobj,
-            typeof(ArgumentOutOfRangeException).GetConstructor(new Type[] { typeof(string) })
+            typeof(ArgumentOutOfRangeException).GetConstructor([typeof(string)])!
         );
         il.Emit(OpCodes.Throw);
-        for (int i = 0; i < labels.Length; i++)
+        for (var i = 0; i < labels.Length; i++)
         {
             il.MarkLabel(labels[i]);
             var member = members[i];
@@ -160,22 +160,21 @@ public abstract class TypeAccessor
             else if (member is PropertyInfo prop)
             {
                 var propType = prop.PropertyType;
-                bool isByRef = propType.IsByRef,
-                    isValid = true;
+                var isByRef = propType.IsByRef;
+                var isValid = true;
                 if (isByRef)
                 {
                     if (
                         !isGet
-                        && prop.CustomAttributes.Any(
-                            x =>
-                                x.AttributeType.FullName
-                                == "System.Runtime.CompilerServices.IsReadOnlyAttribute"
+                        && prop.CustomAttributes.Any(x =>
+                            x.AttributeType.FullName
+                            == "System.Runtime.CompilerServices.IsReadOnlyAttribute"
                         )
                     )
                     {
-                        isValid = false; // can't assign indirectly to ref-readonly
+                        isValid = false; // 无法间接赋值给只读引用
                     }
-                    propType = propType.GetElementType(); // from "ref Foo" to "Foo"
+                    propType = propType.GetElementType(); // 从 "ref Foo" 转换为 "Foo"
                 }
 
                 var accessor =
@@ -184,14 +183,14 @@ public abstract class TypeAccessor
                         : prop.GetSetMethod(allowNonPublicAccessors);
                 if (accessor == null && allowNonPublicAccessors && !isByRef)
                 {
-                    // No getter/setter, use backing field instead if it exists
+                    // 没有getter/setter，如果存在则使用后备字段
                     var backingField = $"<{prop.Name}>k__BackingField";
                     field = prop.DeclaringType?.GetField(
                         backingField,
                         BindingFlags.Instance | BindingFlags.NonPublic
-                    );
+                    )!;
 
-                    if (field != null)
+                    if (field is not null)
                     {
                         WriteField(field);
                     }
@@ -199,7 +198,7 @@ public abstract class TypeAccessor
                 else if (isValid && prop.CanRead && accessor != null)
                 {
                     il.Emit(obj);
-                    Cast(il, type, true); // cast the input object to the right target type
+                    Cast(il, type, true); // 将输入对象转换为正确的目标类型
 
                     if (isGet)
                     {
@@ -209,13 +208,13 @@ public abstract class TypeAccessor
                             null
                         );
                         if (isByRef)
-                            il.Emit(OpCodes.Ldobj, propType); // defererence if needed
-                        if (propType.IsValueType)
-                            il.Emit(OpCodes.Box, propType); // box the value if needed
+                            il.Emit(OpCodes.Ldobj, propType!); // 如果需要则解引用
+                        if (propType!.IsValueType)
+                            il.Emit(OpCodes.Box, propType); // 如果需要则装箱值类型
                     }
                     else
                     {
-                        // when by-ref, we get the target managed pointer *first*, i.e. put obj.TheRef on the stack
+                        // 当为引用类型时，我们首先获取目标托管指针，即将 obj.TheRef 放在堆栈上
                         if (isByRef)
                             il.EmitCall(
                                 type.IsValueType ? OpCodes.Call : OpCodes.Callvirt,
@@ -223,16 +222,16 @@ public abstract class TypeAccessor
                                 null
                             );
 
-                        // load the new value, and type it
+                        // 加载新值并指定类型
                         il.Emit(value);
-                        Cast(il, propType, false);
+                        Cast(il, propType!, false);
 
                         if (isByRef)
-                        { // assign to the managed pointer
-                            il.Emit(OpCodes.Stobj, propType);
+                        { // 赋值给托管指针
+                            il.Emit(OpCodes.Stobj, propType!);
                         }
                         else
-                        { // call the setter
+                        { // 调用setter
                             il.EmitCall(
                                 type.IsValueType ? OpCodes.Call : OpCodes.Callvirt,
                                 accessor,
@@ -255,28 +254,28 @@ public abstract class TypeAccessor
     //);
 
     /// <summary>
-    /// A TypeAccessor based on a Type implementation, with available member metadata
+    /// 基于类型实现的TypeAccessor，具有可用的成员元数据
     /// </summary>
     protected abstract class RuntimeTypeAccessor : TypeAccessor
     {
         /// <summary>
-        /// Returns the Type represented by this accessor
+        /// 返回此访问器表示的类型
         /// </summary>
         protected abstract Type Type { get; }
 
         /// <summary>
-        /// Can this type be queried for member availability?
+        /// 此类型是否可以查询成员可用性？
         /// </summary>
         public override bool GetMembersSupported => true;
 
-        private MemberSet _members;
+        private Member[] _members = null!;
 
         /// <summary>
-        /// Query the members available for this type
+        /// 查询此类型可用的成员
         /// </summary>
-        public override MemberSet GetMembers()
+        public override Member[] GetMembers()
         {
-            return _members ??= new MemberSet(Type);
+            return _members ??= TypeHelpers.GetMembers(Type);
         }
     }
 
@@ -287,13 +286,13 @@ public abstract class TypeAccessor
         private readonly Dictionary<string, int> _dic;
         private readonly Func<int, object, object> _getter;
         private readonly Action<int, object, object> _setter;
-        private readonly Func<object> _ctor;
+        private readonly Func<object>? _ctor;
 
         public DelegateAccessor(
             Dictionary<string, int> dic,
             Func<int, object, object> getter,
             Action<int, object, object> setter,
-            Func<object> ctor,
+            Func<object>? ctor,
             Type type
         )
         {
@@ -333,7 +332,7 @@ public abstract class TypeAccessor
     private static bool IsFullyPublic(Type type, PropertyInfo[] props, bool allowNonPublicAccessors)
     {
         while (type.IsNestedPublic)
-            type = type.DeclaringType;
+            type = type.DeclaringType!;
         if (!type.IsPublic)
             return false;
 
@@ -341,10 +340,12 @@ public abstract class TypeAccessor
         {
             for (int i = 0; i < props.Length; i++)
             {
+                // 非公开的getter
                 if (props[i].GetGetMethod(true) != null && props[i].GetGetMethod(false) == null)
-                    return false; // non-public getter
+                    return false;
+                // 非公开的setter
                 if (props[i].GetSetMethod(true) != null && props[i].GetSetMethod(false) == null)
-                    return false; // non-public setter
+                    return false;
             }
         }
 
@@ -381,11 +382,11 @@ public abstract class TypeAccessor
             }
         }
 
-        ConstructorInfo ctor = null;
+        ConstructorInfo ctor = null!;
 
         if (type.IsClass && !type.IsAbstract)
         {
-            ctor = type.GetConstructor(Type.EmptyTypes);
+            ctor = type.GetConstructor(Type.EmptyTypes)!;
         }
 
         ILGenerator il;
@@ -421,7 +422,7 @@ public abstract class TypeAccessor
                 allowNonPublicAccessors,
                 false
             );
-            DynamicMethod dynCtor = null;
+            DynamicMethod? dynCtor = null;
             if (ctor != null)
             {
                 dynCtor = new DynamicMethod(
@@ -441,20 +442,20 @@ public abstract class TypeAccessor
                     dynGetter.CreateDelegate(typeof(Func<int, object, object>)),
                 (Action<int, object, object>)
                     dynSetter.CreateDelegate(typeof(Action<int, object, object>)),
-                dynCtor == null ? null : (Func<object>)dynCtor.CreateDelegate(typeof(Func<object>)),
+                dynCtor is null ? null : (Func<object>)dynCtor.CreateDelegate(typeof(Func<object>)),
                 type
             );
         }
 
-        // note this region is synchronized; only one is being created at a time so we don't need to stress about the builders
+        // note 注意此区域是同步的；一次只创建一个，所以不需要担心构建器
         if (_assembly == null)
         {
             var name = new AssemblyName("FastMember_dynamic");
             _assembly = AssemblyBuilder.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
-            _module = _assembly.DefineDynamicModule(name.Name);
+            _module = _assembly.DefineDynamicModule(name.Name!);
         }
         TypeAttributes attribs = typeof(TypeAccessor).Attributes;
-        TypeBuilder tb = _module.DefineType(
+        TypeBuilder tb = _module!.DefineType(
             "FastMember_dynamic." + type.Name + "_" + GetNextCounterValue(),
             (attribs | TypeAttributes.Sealed | TypeAttributes.Public)
                 & ~(TypeAttributes.Abstract | TypeAttributes.NotPublic),
@@ -477,10 +478,10 @@ public abstract class TypeAccessor
         il.Emit(OpCodes.Stfld, mapField);
         il.Emit(OpCodes.Ret);
 
-        PropertyInfo indexer = typeof(TypeAccessor).GetProperty("Item");
-        MethodInfo baseGetter = indexer.GetGetMethod(),
-            baseSetter = indexer.GetSetMethod();
-        MethodBuilder body = tb.DefineMethod(
+        PropertyInfo indexer = typeof(TypeAccessor).GetProperty("Item")!;
+        var baseGetter = indexer.GetGetMethod()!;
+        var baseSetter = indexer.GetSetMethod()!;
+        var body = tb.DefineMethod(
             baseGetter.Name,
             baseGetter.Attributes & ~MethodAttributes.Abstract,
             typeof(object),
@@ -503,7 +504,7 @@ public abstract class TypeAccessor
         MethodInfo baseMethod;
         if (ctor != null)
         {
-            baseMethod = typeof(TypeAccessor).GetProperty("CreateNewSupported").GetGetMethod();
+            baseMethod = typeof(TypeAccessor).GetProperty("CreateNewSupported")!.GetGetMethod()!;
             body = tb.DefineMethod(
                 baseMethod.Name,
                 baseMethod.Attributes,
@@ -515,7 +516,7 @@ public abstract class TypeAccessor
             il.Emit(OpCodes.Ret);
             tb.DefineMethodOverride(body, baseMethod);
 
-            baseMethod = typeof(TypeAccessor).GetMethod("CreateNew");
+            baseMethod = typeof(TypeAccessor).GetMethod("CreateNew")!;
             body = tb.DefineMethod(
                 baseMethod.Name,
                 baseMethod.Attributes,
@@ -529,8 +530,8 @@ public abstract class TypeAccessor
         }
 
         baseMethod = typeof(RuntimeTypeAccessor)
-            .GetProperty("Type", BindingFlags.NonPublic | BindingFlags.Instance)
-            .GetGetMethod(true);
+            .GetProperty("Type", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetGetMethod(true)!;
         body = tb.DefineMethod(
             baseMethod.Name,
             baseMethod.Attributes & ~MethodAttributes.Abstract,
@@ -539,11 +540,11 @@ public abstract class TypeAccessor
         );
         il = body.GetILGenerator();
         il.Emit(OpCodes.Ldtoken, type);
-        il.Emit(OpCodes.Call, typeof(Type).GetMethod("GetTypeFromHandle"));
+        il.Emit(OpCodes.Call, typeof(Type).GetMethod("GetTypeFromHandle")!);
         il.Emit(OpCodes.Ret);
         tb.DefineMethodOverride(body, baseMethod);
 
-        var accessor = (TypeAccessor)Activator.CreateInstance(tb.CreateTypeInfo().AsType(), dic);
+        var accessor = (TypeAccessor)Activator.CreateInstance(tb.CreateTypeInfo().AsType(), dic)!;
         return accessor;
     }
 
@@ -568,7 +569,7 @@ public abstract class TypeAccessor
     }
 
     /// <summary>
-    /// Get or set the value of a named member on the target instance
+    /// 获取或设置目标实例上命名成员的值
     /// </summary>
     public abstract object this[object target, string name] { get; set; }
 }

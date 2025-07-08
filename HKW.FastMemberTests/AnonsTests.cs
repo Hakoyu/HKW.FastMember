@@ -1,51 +1,52 @@
-﻿using Xunit;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HKW.FastMember.Tests;
 
-public class Anons
+[TestClass]
+public class AnonsTests
 {
-    [Fact]
+    [TestMethod]
     public void TestAnonTypeAccess()
     {
         var obj = new { A = 123, B = "def" };
 
         var accessor = ObjectAccessor.Create(obj);
-        Assert.Equal(123, accessor["A"]);
-        Assert.Equal("def", accessor["B"]);
+        Assert.AreEqual(123, accessor["A"]);
+        Assert.AreEqual("def", accessor["B"]);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestAnonCtor()
     {
         var obj = new { A = 123, B = "def" };
 
         var accessor = TypeAccessor.Create(obj.GetType());
-        Assert.False(accessor.CreateNewSupported);
+        Assert.IsFalse(accessor.CreateNewSupported);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestPrivateTypeAccess()
     {
         var obj = new Private { A = 123, B = "def" };
 
         var accessor = ObjectAccessor.Create(obj);
-        Assert.Equal(123, accessor["A"]);
-        Assert.Equal("def", accessor["B"]);
+        Assert.AreEqual(123, accessor["A"]);
+        Assert.AreEqual("def", accessor["B"]);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestPrivateTypeCtor()
     {
         var accessor = TypeAccessor.Create(typeof(Private));
-        Assert.True(accessor.CreateNewSupported);
+        Assert.IsTrue(accessor.CreateNewSupported);
         object obj = accessor.CreateNew();
-        Assert.NotNull(obj);
-        Assert.IsType<Private>(obj);
+        Assert.IsNotNull(obj);
+        Assert.IsInstanceOfType<Private>(obj);
     }
 
     private sealed class Private
     {
         public int A { get; set; }
-        public string B { get; set; }
+        public string? B { get; set; }
     }
 }
