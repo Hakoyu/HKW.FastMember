@@ -17,7 +17,7 @@ internal static class CallSiteCache
     private static readonly ConcurrentDictionary<
         string,
         CallSite<Func<CallSite, object, object>>
-    > _getters = new();
+    > _getters = [];
 
     /// <summary>
     /// 存储属性/字段设置器的缓存字典。
@@ -26,7 +26,7 @@ internal static class CallSiteCache
     private static readonly ConcurrentDictionary<
         string,
         CallSite<Func<CallSite, object, object, object>>
-    > _setters = new();
+    > _setters = [];
 
     /// <summary>
     /// 获取对象指定成员的值。
@@ -39,7 +39,7 @@ internal static class CallSiteCache
         if (_getters.TryGetValue(name, out var callSite) is false)
         {
             // 如果缓存中不存在此成员的调用站点，则创建一个新的
-            callSite = CallSite<Func<CallSite, object, object>>.Create(
+            _getters[name] = callSite = CallSite<Func<CallSite, object, object>>.Create(
                 Binder.GetMember(
                     CSharpBinderFlags.None,
                     name,
@@ -63,7 +63,7 @@ internal static class CallSiteCache
         if (_setters.TryGetValue(name, out var callSite) is false)
         {
             // 如果缓存中不存在此成员的调用站点，则创建一个新的
-            callSite = CallSite<Func<CallSite, object, object, object>>.Create(
+            _setters[name] = callSite = CallSite<Func<CallSite, object, object, object>>.Create(
                 Binder.SetMember(
                     CSharpBinderFlags.None,
                     name,
