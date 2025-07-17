@@ -8,6 +8,16 @@ namespace HKW.FastMember;
 /// </summary>
 public sealed class Member
 {
+    internal Member(MemberInfo member)
+    {
+        MemberInfo = member;
+    }
+
+    /// <summary>
+    /// 成员信息
+    /// </summary>
+    public MemberInfo MemberInfo { get; }
+
     /// <summary>
     /// 此成员在其他成员中的序号。
     /// 如果未设置序号，则返回 -1。
@@ -16,7 +26,7 @@ public sealed class Member
     {
         get
         {
-            var ordinalAttr = _member.CustomAttributes.FirstOrDefault(p =>
+            var ordinalAttr = MemberInfo.CustomAttributes.FirstOrDefault(p =>
                 p.AttributeType == typeof(OrdinalAttribute)
             );
 
@@ -33,7 +43,7 @@ public sealed class Member
     /// <summary>
     /// 此成员的名称
     /// </summary>
-    public string Name => _member.Name;
+    public string Name => MemberInfo.Name;
 
     /// <summary>
     /// 存储在此成员中的值的类型
@@ -42,11 +52,11 @@ public sealed class Member
     {
         get
         {
-            if (_member is FieldInfo field)
+            if (MemberInfo is FieldInfo field)
                 return field.FieldType;
-            if (_member is PropertyInfo property)
+            if (MemberInfo is PropertyInfo property)
                 return property.PropertyType;
-            throw new NotSupportedException(_member.GetType().Name);
+            throw new NotSupportedException(MemberInfo.GetType().Name);
         }
     }
 
@@ -57,10 +67,10 @@ public sealed class Member
     {
         get
         {
-            return _member.MemberType switch
+            return MemberInfo.MemberType switch
             {
-                MemberTypes.Property => ((PropertyInfo)_member).CanWrite,
-                _ => throw new NotSupportedException(_member.MemberType.ToString()),
+                MemberTypes.Property => ((PropertyInfo)MemberInfo).CanWrite,
+                _ => throw new NotSupportedException(MemberInfo.MemberType.ToString()),
             };
         }
     }
@@ -72,19 +82,12 @@ public sealed class Member
     {
         get
         {
-            return _member.MemberType switch
+            return MemberInfo.MemberType switch
             {
-                MemberTypes.Property => ((PropertyInfo)_member).CanRead,
-                _ => throw new NotSupportedException(_member.MemberType.ToString()),
+                MemberTypes.Property => ((PropertyInfo)MemberInfo).CanRead,
+                _ => throw new NotSupportedException(MemberInfo.MemberType.ToString()),
             };
         }
-    }
-
-    private readonly MemberInfo _member;
-
-    internal Member(MemberInfo member)
-    {
-        _member = member;
     }
 
     /// <summary>
@@ -94,12 +97,12 @@ public sealed class Member
     {
         if (attributeType == null)
             throw new ArgumentNullException(nameof(attributeType));
-        return Attribute.IsDefined(_member, attributeType);
+        return Attribute.IsDefined(MemberInfo, attributeType);
     }
 
     /// <summary>
     /// 获取特性类型
     /// </summary>
     public Attribute GetAttribute(Type attributeType, bool inherit) =>
-        Attribute.GetCustomAttribute(_member, attributeType, inherit)!;
+        Attribute.GetCustomAttribute(MemberInfo, attributeType, inherit)!;
 }
