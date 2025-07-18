@@ -23,6 +23,9 @@ public class BasicTests
         var access = TypeAccessor.Create(typeof(PropsOnClass));
 
         Assert.AreEqual(123, access[obj, "A"]);
+        Assert.IsTrue(access.TryGetValue(obj, "A", out var a));
+        Assert.AreEqual(123, a);
+        Assert.IsFalse(access.TryGetValue(obj, "AA", out _));
         Assert.AreEqual("abc", access[obj, "B"]);
         Assert.AreEqual(now, access[obj, "C"]);
         Assert.IsNull(access[obj, "D"]);
@@ -43,6 +46,10 @@ public class BasicTests
         access[obj, "D"] = null!;
 
         Assert.AreEqual(123, obj.A);
+        Assert.IsTrue(access.TrySetValue(obj, "A", 456));
+        Assert.AreEqual(456, obj.A);
+        Assert.IsFalse(access.TrySetValue(obj, "AA", 456));
+        Assert.AreEqual("abc", obj.B);
         Assert.AreEqual("abc", obj.B);
         Assert.AreEqual(now, obj.C);
         Assert.IsNull(obj.D);

@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>1.2.3</Version>
+    <Version>1.2.4</Version>
     <Description>In .NET reflection is slow... well, kinda slow. If you need access to the members of an arbitrary type, with the type and member-names known only at runtime - then it is frankly hard (especially for DLR types). This library makes such access easy and fast.</Description>
     <Copyright>Copyright © HKW 2023</Copyright>
     <AssemblyTitle>HKW.FastMember</AssemblyTitle>

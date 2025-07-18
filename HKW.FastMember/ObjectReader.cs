@@ -56,11 +56,11 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
             );
         }
         // 按序号首先排序成员，然后按名称排序。
-        var typeMembers = _accessor.GetMembers().OrderBy(p => p.Ordinal).ToList();
+        var typeMembers = _accessor.GetMembers().OrderBy(p => p.Ordinal).ToArray();
 
         if (isEmptyMembers)
         {
-            members = new string[typeMembers.Count];
+            members = new string[typeMembers.Length];
             for (int i = 0; i < members.Length; i++)
             {
                 members[i] = typeMembers[i].Name;

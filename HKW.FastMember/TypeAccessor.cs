@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Reflection;
@@ -32,15 +33,26 @@ public abstract class TypeAccessor
     /// <summary>
     /// 创建此类型的新实例
     /// </summary>
+    /// <returns>新实例</returns>
     public virtual object CreateNew()
     {
         throw new NotSupportedException();
     }
 
     /// <summary>
-    /// 查询此类型可用的成员
+    /// 获取此类型可用的成员
     /// </summary>
-    public virtual Member[] GetMembers()
+    /// <returns>可用成员</returns>
+    public virtual ImmutableArray<Member> GetMembers()
+    {
+        throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// 获取此类型可用的成员字典
+    /// </summary>
+    /// <returns>成员字典</returns>
+    public virtual ImmutableDictionary<string, Member> GetMemberDictionary()
     {
         throw new NotSupportedException();
     }
@@ -269,14 +281,26 @@ public abstract class TypeAccessor
         /// </summary>
         public override bool GetMembersSupported => true;
 
-        private Member[] _members = null!;
+        private ImmutableArray<Member>? _members;
 
         /// <summary>
-        /// 查询此类型可用的成员
+        /// 获取此类型可用的成员
         /// </summary>
-        public override Member[] GetMembers()
+        public override ImmutableArray<Member> GetMembers()
         {
             return _members ??= TypeHelpers.GetMembers(Type);
+        }
+
+        private ImmutableDictionary<string, Member>? _memberByName = null;
+
+        /// <summary>
+        /// 获取此类型可用的成员字典
+        /// </summary>
+        /// <returns>成员字典</returns>
+        public override ImmutableDictionary<string, Member> GetMemberDictionary()
+        {
+            _members ??= TypeHelpers.GetMembers(Type);
+            return _memberByName ??= _members.Value.ToImmutableDictionary(m => m.Name, m => m);
         }
     }
 

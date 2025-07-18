@@ -29,7 +29,10 @@ public static class TypeHelpers
     /// <param name="type">类型</param>
     /// <param name="bindingFlags">标志</param>
     /// <returns>所有目标成员</returns>
-    public static Member[] GetMembers(Type type, BindingFlags bindingFlags = PublicInstance)
+    public static ImmutableArray<Member> GetMembers(
+        Type type,
+        BindingFlags bindingFlags = PublicInstance
+    )
     {
         ArgumentNullException.ThrowIfNull(type, nameof(type));
         return type.GetTypeAndInterfaceProperties(bindingFlags)
@@ -37,7 +40,7 @@ public static class TypeHelpers
             .Concat(type.GetFields(bindingFlags).Cast<MemberInfo>())
             .OrderBy(x => x.Name)
             .Select(member => new Member(member))
-            .ToArray();
+            .ToImmutableArray();
     }
 
     /// <summary>
@@ -46,7 +49,7 @@ public static class TypeHelpers
     /// <typeparam name="T">类型</typeparam>
     /// <param name="bindingFlags">标志</param>
     /// <returns>所有目标成员</returns>
-    public static Member[] GetMembers<T>(BindingFlags bindingFlags = PublicInstance)
+    public static IEnumerable<Member> GetMembers<T>(BindingFlags bindingFlags = PublicInstance)
     {
         return GetMembers(typeof(T), bindingFlags);
     }

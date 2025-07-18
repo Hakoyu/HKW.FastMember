@@ -1,4 +1,5 @@
-﻿using System.Dynamic;
+﻿using System.Collections.Immutable;
+using System.Dynamic;
 
 namespace HKW.FastMember;
 
@@ -50,7 +51,7 @@ public abstract class ObjectAccessor
     }
     #endregion
 
-    #region Try
+    #region TypeAccessor
 
     /// <summary>
     /// 尝试获取成员值
@@ -67,10 +68,28 @@ public abstract class ObjectAccessor
     /// <param name="value">成员值</param>
     /// <returns>成功为 <see langword="true"/>, 失败为 <see langword="false"/></returns>
     public abstract bool TrySetValue(string name, object value);
+
+    /// <summary>
+    /// 获取此类型可用的成员
+    /// </summary>
+    /// <returns>可用成员</returns>
+    public virtual ImmutableArray<Member> GetMembers()
+    {
+        throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// 获取此类型可用的成员字典
+    /// </summary>
+    /// <returns>成员字典</returns>
+    public virtual ImmutableDictionary<string, Member> GetMemberDictionary()
+    {
+        throw new NotSupportedException();
+    }
+
     #endregion
 
     #region Other
-
     /// <inheritdoc/>
     public override bool Equals(object? obj)
     {
@@ -95,28 +114,38 @@ public abstract class ObjectAccessor
 
 internal sealed class TypeAccessorWrapper : ObjectAccessor
 {
-    private readonly TypeAccessor _accessor;
+    public readonly TypeAccessor Accessor;
 
     public TypeAccessorWrapper(object source, TypeAccessor accessor)
         : base(source)
     {
-        _accessor = accessor;
+        Accessor = accessor;
     }
 
     public override object this[string name]
     {
-        get => _accessor[Source, name];
-        set => _accessor[Source, name] = value;
+        get => Accessor[Source, name];
+        set => Accessor[Source, name] = value;
     }
 
     public override bool TryGetValue(string name, out object value)
     {
-        return _accessor.TryGetValue(Source, name, out value);
+        return Accessor.TryGetValue(Source, name, out value);
     }
 
     public override bool TrySetValue(string name, object value)
     {
-        return _accessor.TrySetValue(Source, name, value);
+        return Accessor.TrySetValue(Source, name, value);
+    }
+
+    public override ImmutableArray<Member> GetMembers()
+    {
+        return Accessor.GetMembers();
+    }
+
+    public override ImmutableDictionary<string, Member> GetMemberDictionary()
+    {
+        return Accessor.GetMemberDictionary();
     }
 }
 
