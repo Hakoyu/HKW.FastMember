@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Dynamic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -283,13 +284,13 @@ public abstract class TypeAccessor
     {
         protected override Type Type { get; }
 
-        private readonly Dictionary<string, int> _dic;
+        private readonly ImmutableDictionary<string, int> _dic;
         private readonly Func<int, object, object> _getter;
         private readonly Action<int, object, object> _setter;
         private readonly Func<object>? _ctor;
 
         public DelegateAccessor(
-            Dictionary<string, int> dic,
+            ImmutableDictionary<string, int> dic,
             Func<int, object, object> getter,
             Action<int, object, object> setter,
             Func<object>? ctor,
@@ -325,6 +326,31 @@ public abstract class TypeAccessor
                     _setter(index, target, value);
                 else
                     throw new ArgumentOutOfRangeException(nameof(name));
+            }
+        }
+
+        public override bool TryGetValue(object target, string name, out object value)
+        {
+            if (_dic.TryGetValue(name, out int index) is false)
+            {
+                value = default!;
+                return false;
+            }
+            else
+            {
+                value = _getter(index, target);
+                return true;
+            }
+        }
+
+        public override bool TrySetValue(object target, string name, object value)
+        {
+            if (_dic.TryGetValue(name, out int index) is false)
+                return false;
+            else
+            {
+                _setter(index, target, value);
+                return true;
             }
         }
     }
@@ -437,7 +463,7 @@ public abstract class TypeAccessor
                 il.Emit(OpCodes.Ret);
             }
             return new DelegateAccessor(
-                dic,
+                dic.ToImmutableDictionary(),
                 (Func<int, object, object>)
                     dynGetter.CreateDelegate(typeof(Func<int, object, object>)),
                 (Action<int, object, object>)
@@ -544,8 +570,218 @@ public abstract class TypeAccessor
         il.Emit(OpCodes.Ret);
         tb.DefineMethodOverride(body, baseMethod);
 
+        // 添加 TryGetValue 方法的 IL 编织
+        baseMethod = typeof(TypeAccessor).GetMethod("TryGetValue")!;
+        body = tb.DefineMethod(
+            baseMethod.Name,
+            baseMethod.Attributes & ~MethodAttributes.Abstract,
+            baseMethod.ReturnType,
+            new Type[] { typeof(object), typeof(string), typeof(object).MakeByRefType() }
+        );
+        il = body.GetILGenerator();
+        WriteTryMapImpl(il, type, members, mapField, allowNonPublicAccessors, true);
+        tb.DefineMethodOverride(body, baseMethod);
+
+        // 添加 TrySetValue 方法的 IL 编织
+        baseMethod = typeof(TypeAccessor).GetMethod("TrySetValue")!;
+        body = tb.DefineMethod(
+            baseMethod.Name,
+            baseMethod.Attributes & ~MethodAttributes.Abstract,
+            baseMethod.ReturnType,
+            new Type[] { typeof(object), typeof(string), typeof(object) }
+        );
+        il = body.GetILGenerator();
+        WriteTryMapImpl(il, type, members, mapField, allowNonPublicAccessors, false);
+        tb.DefineMethodOverride(body, baseMethod);
+
         var accessor = (TypeAccessor)Activator.CreateInstance(tb.CreateTypeInfo().AsType(), dic)!;
         return accessor;
+    }
+
+    private static void WriteTryMapImpl(
+        ILGenerator il,
+        Type type,
+        List<MemberInfo> members,
+        FieldBuilder mapField,
+        bool allowNonPublicAccessors,
+        bool isGet
+    )
+    {
+        // 声明局部变量：int index
+        il.DeclareLocal(typeof(int));
+
+        // 加载字典、名称参数并调用 TryGetValue
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldfld, mapField);
+        il.Emit(OpCodes.Ldarg_2); // name 参数
+        il.Emit(OpCodes.Ldloca_S, (byte)0); // index 局部变量的地址
+        il.EmitCall(OpCodes.Callvirt, _tryGetValue, null);
+
+        // 如果 TryGetValue 返回 false，跳转到返回 false
+        Label returnFalse = il.DefineLabel();
+        il.Emit(OpCodes.Brfalse, returnFalse);
+
+        var labels = new Label[members.Count];
+        for (int i = 0; i < labels.Length; i++)
+        {
+            labels[i] = il.DefineLabel();
+        }
+
+        // switch 基于索引
+        il.Emit(OpCodes.Ldloc_0); // 加载 index
+        il.Emit(OpCodes.Switch, labels);
+
+        // 如果索引超出范围，返回 false
+        il.MarkLabel(returnFalse);
+        if (isGet)
+        {
+            il.Emit(OpCodes.Ldarg_3); // value 参数
+            il.Emit(OpCodes.Ldnull);
+            il.Emit(OpCodes.Stind_Ref); // 设置 value = null
+        }
+        il.Emit(OpCodes.Ldc_I4_0); // 返回 false
+        il.Emit(OpCodes.Ret);
+
+        // 为每个成员生成逻辑
+        for (var i = 0; i < labels.Length; i++)
+        {
+            il.MarkLabel(labels[i]);
+            var member = members[i];
+            bool hasValidOperation = false;
+
+            void WriteField(FieldInfo fieldToAccess)
+            {
+                if (!fieldToAccess.FieldType.IsByRef)
+                {
+                    if (isGet)
+                    {
+                        il.Emit(OpCodes.Ldarg_3); // value 参数
+                        il.Emit(OpCodes.Ldarg_1); // target 参数
+                        Cast(il, type, true);
+                        il.Emit(OpCodes.Ldfld, fieldToAccess);
+                        if (fieldToAccess.FieldType.IsValueType)
+                            il.Emit(OpCodes.Box, fieldToAccess.FieldType);
+                        il.Emit(OpCodes.Stind_Ref); // 设置 value
+                    }
+                    else
+                    {
+                        il.Emit(OpCodes.Ldarg_1); // target 参数
+                        Cast(il, type, true);
+                        il.Emit(OpCodes.Ldarg_3); // value 参数
+                        Cast(il, fieldToAccess.FieldType, false);
+                        il.Emit(OpCodes.Stfld, fieldToAccess);
+                    }
+                    il.Emit(OpCodes.Ldc_I4_1); // 返回 true
+                    il.Emit(OpCodes.Ret);
+                    hasValidOperation = true;
+                }
+            }
+
+            if (member is FieldInfo field)
+            {
+                WriteField(field);
+            }
+            else if (member is PropertyInfo prop)
+            {
+                var propType = prop.PropertyType;
+                var isByRef = propType.IsByRef;
+                var isValid = true;
+
+                if (isByRef)
+                {
+                    if (
+                        !isGet
+                        && prop.CustomAttributes.Any(x =>
+                            x.AttributeType.FullName
+                            == "System.Runtime.CompilerServices.IsReadOnlyAttribute"
+                        )
+                    )
+                    {
+                        isValid = false; // 无法间接赋值给只读引用
+                    }
+                    propType = propType.GetElementType();
+                }
+
+                var getter = prop.GetGetMethod(allowNonPublicAccessors);
+                var setter = prop.GetSetMethod(allowNonPublicAccessors);
+                var accessor = isGet || isByRef ? getter : setter;
+
+                if (accessor == null && allowNonPublicAccessors && !isByRef)
+                {
+                    // 尝试使用后备字段
+                    var backingField = $"<{prop.Name}>k__BackingField";
+                    field = prop.DeclaringType?.GetField(
+                        backingField,
+                        BindingFlags.Instance | BindingFlags.NonPublic
+                    )!;
+
+                    if (field is not null)
+                    {
+                        WriteField(field);
+                    }
+                }
+                else if (
+                    isValid
+                    && accessor != null
+                    && (isGet ? prop.CanRead : (prop.CanWrite || (isByRef && getter != null)))
+                )
+                {
+                    if (isGet)
+                    {
+                        il.Emit(OpCodes.Ldarg_3); // value 参数
+                        il.Emit(OpCodes.Ldarg_1); // target 参数
+                        Cast(il, type, true);
+                        il.EmitCall(
+                            type.IsValueType ? OpCodes.Call : OpCodes.Callvirt,
+                            accessor,
+                            null
+                        );
+                        if (isByRef)
+                            il.Emit(OpCodes.Ldobj, propType!);
+                        if (propType!.IsValueType)
+                            il.Emit(OpCodes.Box, propType);
+                        il.Emit(OpCodes.Stind_Ref); // 设置 value
+                    }
+                    else
+                    {
+                        il.Emit(OpCodes.Ldarg_1); // target 参数
+                        Cast(il, type, true);
+
+                        if (isByRef)
+                        {
+                            // 获取引用
+                            il.EmitCall(
+                                type.IsValueType ? OpCodes.Call : OpCodes.Callvirt,
+                                getter!,
+                                null
+                            );
+                            il.Emit(OpCodes.Ldarg_3); // value 参数
+                            Cast(il, propType!, false);
+                            il.Emit(OpCodes.Stobj, propType!);
+                        }
+                        else
+                        {
+                            il.Emit(OpCodes.Ldarg_3); // value 参数
+                            Cast(il, propType!, false);
+                            il.EmitCall(
+                                type.IsValueType ? OpCodes.Call : OpCodes.Callvirt,
+                                accessor,
+                                null
+                            );
+                        }
+                    }
+                    il.Emit(OpCodes.Ldc_I4_1); // 返回 true
+                    il.Emit(OpCodes.Ret);
+                    hasValidOperation = true;
+                }
+            }
+
+            if (!hasValidOperation)
+            {
+                // 如果没有有效的操作，返回 false
+                il.Emit(OpCodes.Br, returnFalse);
+            }
+        }
     }
 
     private static void Cast(ILGenerator il, Type type, bool valueAsPointer)
@@ -572,11 +808,29 @@ public abstract class TypeAccessor
     /// 获取或设置目标实例上命名成员的值
     /// </summary>
     public abstract object this[object target, string name] { get; set; }
+
+    /// <summary>
+    /// 尝试获取成员值
+    /// </summary>
+    /// <param name="target">目标</param>
+    /// <param name="name">成员名称</param>
+    /// <param name="value">成员值</param>
+    /// <returns>成功为 <see langword="true"/>, 失败为 <see langword="false"/></returns>
+    public abstract bool TryGetValue(object target, string name, out object value);
+
+    /// <summary>
+    /// 尝试设置成员值
+    /// </summary>
+    /// <param name="target">目标</param>
+    /// <param name="name">成员名称</param>
+    /// <param name="value">成员值</param>
+    /// <returns>成功为 <see langword="true"/>, 失败为 <see langword="false"/></returns>
+    public abstract bool TrySetValue(object target, string name, object value);
 }
 
 internal sealed class DynamicAccessor : TypeAccessor
 {
-    public static readonly DynamicAccessor Singleton = new();
+    public static DynamicAccessor Singleton { get; } = new();
 
     private DynamicAccessor() { }
 
@@ -584,5 +838,15 @@ internal sealed class DynamicAccessor : TypeAccessor
     {
         get => CallSiteCache.GetValue(name, target);
         set => CallSiteCache.SetValue(name, target, value);
+    }
+
+    public override bool TryGetValue(object target, string name, out object value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override bool TrySetValue(object target, string name, object value)
+    {
+        throw new NotImplementedException();
     }
 }

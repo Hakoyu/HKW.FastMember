@@ -50,28 +50,23 @@ public abstract class ObjectAccessor
     }
     #endregion
 
-    #region Value
-    /// <summary>
-    /// 获取值
-    /// </summary>
-    /// <typeparam name="TValue">值类型</typeparam>
-    /// <param name="name">目标名称</param>
-    /// <returns>值</returns>
-    public TValue GetValue<TValue>(string name)
-    {
-        return (TValue)this[name];
-    }
+    #region Try
 
     /// <summary>
-    /// 设置值
+    /// 尝试获取成员值
     /// </summary>
-    /// <typeparam name="TValue">值类型</typeparam>
-    /// <param name="name">名称</param>
-    /// <param name="newValue">新值</param>
-    public void SetValue<TValue>(string name, TValue newValue)
-    {
-        this[name] = newValue!;
-    }
+    /// <param name="name">成员名称</param>
+    /// <param name="value">成员值</param>
+    /// <returns>成功为 <see langword="true"/>, 失败为 <see langword="false"/></returns>
+    public abstract bool TryGetValue(string name, out object value);
+
+    /// <summary>
+    /// 尝试设置成员值
+    /// </summary>
+    /// <param name="name">成员名称</param>
+    /// <param name="value">成员值</param>
+    /// <returns>成功为 <see langword="true"/>, 失败为 <see langword="false"/></returns>
+    public abstract bool TrySetValue(string name, object value);
     #endregion
 
     #region Other
@@ -113,6 +108,16 @@ internal sealed class TypeAccessorWrapper : ObjectAccessor
         get => _accessor[Source, name];
         set => _accessor[Source, name] = value;
     }
+
+    public override bool TryGetValue(string name, out object value)
+    {
+        return _accessor.TryGetValue(Source, name, out value);
+    }
+
+    public override bool TrySetValue(string name, object value)
+    {
+        return _accessor.TrySetValue(Source, name, value);
+    }
 }
 
 internal sealed class DynamicWrapper : ObjectAccessor
@@ -124,5 +129,15 @@ internal sealed class DynamicWrapper : ObjectAccessor
     {
         get => CallSiteCache.GetValue(name, Source);
         set => CallSiteCache.SetValue(name, Source, value);
+    }
+
+    public override bool TryGetValue(string name, out object value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override bool TrySetValue(string name, object value)
+    {
+        throw new NotImplementedException();
     }
 }
