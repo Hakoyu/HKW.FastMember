@@ -342,14 +342,20 @@ public abstract class TypeAccessor
                 if (_dic.TryGetValue(name, out int index))
                     return _getter(index, target);
                 else
-                    throw new ArgumentOutOfRangeException(nameof(name));
+                    throw new ArgumentOutOfRangeException(
+                        nameof(name),
+                        $"Source type: {Type}, Member name: {name}"
+                    );
             }
             set
             {
                 if (_dic.TryGetValue(name, out int index))
                     _setter(index, target, value);
                 else
-                    throw new ArgumentOutOfRangeException(nameof(name));
+                    throw new ArgumentOutOfRangeException(
+                        nameof(name),
+                        $"Source type: {Type}, Member name: {name}"
+                    );
             }
         }
 

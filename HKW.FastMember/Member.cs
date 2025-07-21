@@ -91,18 +91,45 @@ public sealed class Member
     }
 
     /// <summary>
-    /// 指定的特性是否在此类型上定义
+    /// 获取特性是否定义
     /// </summary>
-    public bool IsDefined(Type attributeType)
+    /// <param name="attributeType">特性类型</param>
+    /// <param name="inherit">包括父类特性</param>
+    /// <returns>已定义为 <see langword="true"/>, 否则为 <see langword="false"/></returns>
+    public bool IsDefined(Type attributeType, bool inherit)
     {
-        if (attributeType == null)
-            throw new ArgumentNullException(nameof(attributeType));
-        return Attribute.IsDefined(MemberInfo, attributeType);
+        return Attribute.IsDefined(MemberInfo, attributeType, inherit);
     }
 
     /// <summary>
-    /// 获取特性类型
+    /// 获取特性是否定义
     /// </summary>
-    public Attribute GetAttribute(Type attributeType, bool inherit) =>
-        Attribute.GetCustomAttribute(MemberInfo, attributeType, inherit)!;
+    /// <param name="inherit">包括父类特性</param>
+    /// <typeparam name="T">特性类型</typeparam>
+    /// <returns>已定义为 <see langword="true"/>, 否则为 <see langword="false"/></returns>
+    public bool IsDefined<T>(bool inherit)
+        where T : Attribute
+    {
+        return Attribute.IsDefined(MemberInfo, typeof(T), inherit);
+    }
+
+    /// <summary>
+    /// 获取指定类型特性
+    /// </summary>
+    /// <param name="attributeType">特性类型</param>
+    /// <param name="inherit">包括父类特性</param>
+    /// <returns>特性</returns>
+    public Attribute? GetAttribute(Type attributeType, bool inherit)
+    {
+        return Attribute.GetCustomAttribute(MemberInfo, attributeType, inherit)!;
+    }
+
+    /// <summary>
+    /// 获取指定类型特性
+    /// </summary>
+    public Attribute? GetAttribute<T>(bool inherit)
+        where T : Attribute
+    {
+        return Attribute.GetCustomAttribute(MemberInfo, typeof(T), inherit)!;
+    }
 }
