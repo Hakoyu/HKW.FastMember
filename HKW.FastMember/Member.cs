@@ -96,7 +96,7 @@ public sealed class Member
     /// <param name="attributeType">特性类型</param>
     /// <param name="inherit">包括父类特性</param>
     /// <returns>已定义为 <see langword="true"/>, 否则为 <see langword="false"/></returns>
-    public bool IsDefined(Type attributeType, bool inherit)
+    public bool IsDefined(Type attributeType, bool inherit = false)
     {
         return Attribute.IsDefined(MemberInfo, attributeType, inherit);
     }
@@ -107,7 +107,7 @@ public sealed class Member
     /// <param name="inherit">包括父类特性</param>
     /// <typeparam name="T">特性类型</typeparam>
     /// <returns>已定义为 <see langword="true"/>, 否则为 <see langword="false"/></returns>
-    public bool IsDefined<T>(bool inherit)
+    public bool IsDefined<T>(bool inherit = false)
         where T : Attribute
     {
         return Attribute.IsDefined(MemberInfo, typeof(T), inherit);
@@ -119,7 +119,7 @@ public sealed class Member
     /// <param name="attributeType">特性类型</param>
     /// <param name="inherit">包括父类特性</param>
     /// <returns>特性</returns>
-    public Attribute? GetAttribute(Type attributeType, bool inherit)
+    public Attribute? GetAttribute(Type attributeType, bool inherit = false)
     {
         return Attribute.GetCustomAttribute(MemberInfo, attributeType, inherit)!;
     }
@@ -127,7 +127,7 @@ public sealed class Member
     /// <summary>
     /// 获取指定类型特性
     /// </summary>
-    public Attribute? GetAttribute<T>(bool inherit)
+    public Attribute? GetAttribute<T>(bool inherit = false)
         where T : Attribute
     {
         return Attribute.GetCustomAttribute(MemberInfo, typeof(T), inherit)!;
