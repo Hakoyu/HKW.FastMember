@@ -6,6 +6,7 @@ internal class Program
     {
 #if DEBUG
 
+        throw new Exception("");
 #endif
     }
 }

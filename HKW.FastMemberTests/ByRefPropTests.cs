@@ -27,7 +27,7 @@ public class ByRefPropTests
         acc["Ref"] = 44;
         Assert.AreEqual(44, foo.Val);
 
-        var ex = Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() =>
         {
             acc["RefReadOnly"] = 45;
         });

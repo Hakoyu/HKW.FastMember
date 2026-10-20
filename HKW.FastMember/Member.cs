@@ -52,8 +52,8 @@ public sealed class Member
     {
         get
         {
-            if (MemberInfo is FieldInfo field)
-                return field.FieldType;
+            if (MemberInfo is FieldInfo f)
+                return f.FieldType;
             if (MemberInfo is PropertyInfo property)
                 return property.PropertyType;
             throw new NotSupportedException(MemberInfo.GetType().Name);

@@ -17,7 +17,7 @@ public class BasicTests
             A = 123,
             B = "abc",
             C = now,
-            D = null
+            D = null,
         };
 
         var access = TypeAccessor.Create(typeof(PropsOnClass));
@@ -78,7 +78,7 @@ public class BasicTests
             A = 123,
             B = "abc",
             C = now,
-            D = null
+            D = null,
         };
 
         var wrapper = ObjectAccessor.Create(obj);
@@ -119,7 +119,7 @@ public class BasicTests
             A = 123,
             B = "abc",
             C = now,
-            D = null
+            D = null,
         };
 
         var access = TypeAccessor.Create(typeof(FieldsOnClass));
@@ -160,7 +160,7 @@ public class BasicTests
             A = 123,
             B = "abc",
             C = now,
-            D = null
+            D = null,
         };
 
         var access = TypeAccessor.Create(typeof(PropsOnStruct));
@@ -195,7 +195,7 @@ public class BasicTests
             A = 123,
             B = "abc",
             C = now,
-            D = null
+            D = null,
         };
 
         var access = TypeAccessor.Create(typeof(FieldsOnStruct));
@@ -222,7 +222,7 @@ public class BasicTests
     [TestMethod]
     public void WriteInvalidMember()
     {
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
         {
             var access = TypeAccessor.Create(typeof(PropsOnClass));
             var obj = new PropsOnClass();
@@ -233,7 +233,7 @@ public class BasicTests
     [TestMethod]
     public void ReadInvalidMember()
     {
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
         {
             var access = TypeAccessor.Create(typeof(PropsOnClass));
             var obj = new PropsOnClass();
@@ -427,19 +427,19 @@ public class BasicTests
         acc2[obj, "Beta"] = 7;
         Assert.AreEqual(7, acc2[obj, "Beta"]);
 
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
         {
             int i = (int)acc0[obj, "Bar"];
         });
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
         {
             acc0[obj, "Foo"] = 6;
         });
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
         {
             acc0[obj, "Beta"] = 7;
         });
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
         {
             acc0[obj, "Theta"] = 8;
         });
@@ -496,22 +496,22 @@ public class BasicTests
                 A = 123,
                 B = "abc",
                 C = 1,
-                D = 123
+                D = 123,
             },
             new ObjectReaderWithPartiallyDefinedColumnsOrderType
             {
                 A = 456,
                 B = "def",
                 C = 2,
-                D = null
+                D = null,
             },
             new ObjectReaderWithPartiallyDefinedColumnsOrderType
             {
                 A = 789,
                 B = "ghi",
                 C = 3,
-                D = 789
-            }
+                D = 789,
+            },
         };
         var table = new DataTable();
         using (var reader = ObjectReader.Create(source))
@@ -568,22 +568,22 @@ public class BasicTests
                 A = 123,
                 B = "abc",
                 C = 1,
-                D = 123
+                D = 123,
             },
             new ObjectReaderWithDefinedColumnsOrderType
             {
                 A = 456,
                 B = "def",
                 C = 2,
-                D = null
+                D = null,
             },
             new ObjectReaderWithDefinedColumnsOrderType
             {
                 A = 789,
                 B = "ghi",
                 C = 3,
-                D = 789
-            }
+                D = 789,
+            },
         };
         var table = new DataTable();
         using (var reader = ObjectReader.Create(source))
@@ -640,22 +640,22 @@ public class BasicTests
                 A = 123,
                 B = "abc",
                 C = 1,
-                D = 123
+                D = 123,
             },
             new ObjectReaderWithDefinedColumnsOrderType
             {
                 A = 456,
                 B = "def",
                 C = 2,
-                D = null
+                D = null,
             },
             new ObjectReaderWithDefinedColumnsOrderType
             {
                 A = 789,
                 B = "ghi",
                 C = 3,
-                D = 789
-            }
+                D = 789,
+            },
         };
         var table = new DataTable();
         using (var reader = ObjectReader.Create(source, "B", "A", "D"))
@@ -701,22 +701,22 @@ public class BasicTests
                 A = 123,
                 B = "abc",
                 C = 1,
-                D = 123
+                D = 123,
             },
             new ObjectReaderType
             {
                 A = 456,
                 B = "def",
                 C = 2,
-                D = null
+                D = null,
             },
             new ObjectReaderType
             {
                 A = 789,
                 B = "ghi",
                 C = 3,
-                D = 789
-            }
+                D = 789,
+            },
         };
         var table = new DataTable();
         using (var reader = ObjectReader.Create(source))
@@ -763,22 +763,22 @@ public class BasicTests
                 A = 123,
                 B = "abc",
                 C = 1,
-                D = 123
+                D = 123,
             },
             new ObjectReaderType
             {
                 A = 456,
                 B = "def",
                 C = 2,
-                D = null
+                D = null,
             },
             new ObjectReaderType
             {
                 A = 789,
                 B = "ghi",
                 C = 3,
-                D = 789
-            }
+                D = 789,
+            },
         };
         var table = new DataTable();
         using (var reader = ObjectReader.Create(source, "B", "A", "D"))

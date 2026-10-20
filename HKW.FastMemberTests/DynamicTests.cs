@@ -21,7 +21,7 @@ public class DynamicTests
     [TestMethod]
     public void TestReadInvalid()
     {
-        Assert.ThrowsException<RuntimeBinderException>(() =>
+        Assert.Throws<RuntimeBinderException>(() =>
         {
             dynamic expando = new ExpandoObject();
             var wrap = ObjectAccessor.Create((object)expando);
