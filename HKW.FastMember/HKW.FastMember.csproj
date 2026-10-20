@@ -9,13 +9,22 @@
     <PackageTags>Reflection;Dynamic;Member;Access</PackageTags>
     <PackageProjectUrl>https://github.com/hakoyu/HKW.FastMember</PackageProjectUrl>
     <RepositoryUrl>https://github.com/hakoyu/HKW.FastMember</RepositoryUrl>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <IncludeSymbols>False</IncludeSymbols>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
-    <PathMap>$(SolutionDir)=$(MSBuildProjectName.Replace(" ", "_"))/</PathMap>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <Deterministic>true</Deterministic>
+    <PathMap Condition="'$(SolutionDir)' != ''">$(SolutionDir)=/_/</PathMap>
+    <PathMap Condition="'$(SolutionDir)' == ''"
+      >$(MSBuildProjectDirectory)=/_/$(AssemblyName)/</PathMap
+    >
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

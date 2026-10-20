@@ -19,8 +19,8 @@ public sealed class Member
     public MemberInfo MemberInfo { get; }
 
     /// <summary>
-    /// 此成员在其他成员中的序号。
-    /// 如果未设置序号，则返回 -1。
+    /// 此成员在其他成员中的序号
+    /// 如果未设置序号，则返回 -1
     /// </summary>
     public int Ordinal
     {
@@ -35,7 +35,7 @@ public sealed class Member
                 return -1;
             }
 
-            // OrdinalAttribute 类必须只有一个带单个参数的构造函数。
+            // OrdinalAttribute 类必须只有一个带单个参数的构造函数
             return Convert.ToInt32(ordinalAttr.ConstructorArguments.Single().Value);
         }
     }

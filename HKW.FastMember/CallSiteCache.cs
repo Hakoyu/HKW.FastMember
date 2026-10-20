@@ -5,14 +5,14 @@ using Microsoft.CSharp.RuntimeBinder;
 namespace HKW.FastMember;
 
 /// <summary>
-/// 提供动态成员访问的调用站点缓存功能。
-/// 该类使用动态绑定技术实现对对象属性和字段的高效访问。
+/// 提供动态成员访问的调用站点缓存功能
+/// 该类使用动态绑定技术实现对对象属性和字段的高效访问
 /// </summary>
 internal static class CallSiteCache
 {
     /// <summary>
-    /// 存储属性/字段获取器的缓存字典。
-    /// 键为成员名称，值为用于获取成员值的调用站点。
+    /// 存储属性/字段获取器的缓存字典
+    /// 键为成员名称，值为用于获取成员值的调用站点
     /// </summary>
     private static readonly ConcurrentDictionary<
         string,
@@ -20,8 +20,8 @@ internal static class CallSiteCache
     > _getters = [];
 
     /// <summary>
-    /// 存储属性/字段设置器的缓存字典。
-    /// 键为成员名称，值为用于设置成员值的调用站点。
+    /// 存储属性/字段设置器的缓存字典
+    /// 键为成员名称，值为用于设置成员值的调用站点
     /// </summary>
     private static readonly ConcurrentDictionary<
         string,
@@ -29,7 +29,7 @@ internal static class CallSiteCache
     > _setters = [];
 
     /// <summary>
-    /// 获取对象指定成员的值。
+    /// 获取对象指定成员的值
     /// </summary>
     /// <param name="name">要获取的成员名称</param>
     /// <param name="target">目标对象实例</param>
@@ -53,7 +53,7 @@ internal static class CallSiteCache
     }
 
     /// <summary>
-    /// 设置对象指定成员的值。
+    /// 设置对象指定成员的值
     /// </summary>
     /// <param name="name">要设置的成员名称</param>
     /// <param name="target">目标对象实例</param>
@@ -70,7 +70,7 @@ internal static class CallSiteCache
                     typeof(CallSiteCache),
                     [
                         CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                        CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.UseCompileTimeType, null)
+                        CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.UseCompileTimeType, null),
                     ]
                 )
             );

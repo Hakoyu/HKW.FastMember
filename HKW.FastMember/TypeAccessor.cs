@@ -2,6 +2,7 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Dynamic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -72,7 +73,7 @@ public abstract class TypeAccessor
     /// <remarks>访问器在内部缓存；可能返回预先存在的访问器</remarks>
     public static TypeAccessor Create(Type type, bool allowNonPublicAccessors)
     {
-        ArgumentNullException.ThrowIfNull(type, nameof(type));
+        ArgumentNullException.ThrowIfNull(type);
 
         var accessors = allowNonPublicAccessors ? _nonPublicAccessors : _publicAccessors;
         if (accessors.TryGetValue(type, out var accessor))
@@ -191,7 +192,7 @@ public abstract class TypeAccessor
                 }
 
                 var accessor =
-                    (isGet | isByRef)
+                    (isGet || isByRef)
                         ? prop.GetGetMethod(allowNonPublicAccessors)
                         : prop.GetSetMethod(allowNonPublicAccessors);
                 if (accessor == null && allowNonPublicAccessors && !isByRef)
@@ -429,13 +430,10 @@ public abstract class TypeAccessor
             }
         }
 
-        foreach (var field in fields)
+        foreach (var field in fields.Where(field => dic.ContainsKey(field.Name) is false))
         {
-            if (!dic.ContainsKey(field.Name))
-            {
-                dic.Add(field.Name, i++);
-                members.Add(field);
-            }
+            dic.Add(field.Name, i++);
+            members.Add(field);
         }
 
         ConstructorInfo ctor = null!;
@@ -816,7 +814,10 @@ public abstract class TypeAccessor
 
     private static void Cast(ILGenerator il, Type type, bool valueAsPointer)
     {
-        if (type == typeof(object)) { }
+        if (type == typeof(object))
+        {
+            return;
+        }
         else if (type.IsValueType)
         {
             if (valueAsPointer)

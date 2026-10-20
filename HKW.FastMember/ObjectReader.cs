@@ -44,7 +44,7 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     /// </summary>
     /// <param name="type">要读取的信息的预期类型</param>
     /// <param name="members">应该暴露给读取器的成员</param>
-    internal ObjectReader(Type type, params string[] members)
+    protected ObjectReader(Type type, params string[] members)
     {
         var isEmptyMembers = members is null || members.Length == 0;
 
@@ -149,8 +149,8 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
                 { "ColumnName", typeof(string) },
                 { "DataType", typeof(Type) },
                 { "ColumnSize", typeof(int) },
-                { "AllowDBNull", typeof(bool) }
-            }
+                { "AllowDBNull", typeof(bool) },
+            },
         };
         var rowData = new object[5];
         for (var i = 0; i < _memberNames.Length; i++)
@@ -206,10 +206,10 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     public override int FieldCount => _memberNames.Length;
 
     /// <inheritdoc/>
-    public override bool GetBoolean(int ordinal) => (bool)this[ordinal]!;
+    public override bool GetBoolean(int ordinal) => (bool)this[ordinal];
 
     /// <inheritdoc/>
-    public override byte GetByte(int ordinal) => (byte)this[ordinal]!;
+    public override byte GetByte(int ordinal) => (byte)this[ordinal];
 
     /// <inheritdoc/>
     public override long GetBytes(
@@ -220,7 +220,7 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
         int length
     )
     {
-        byte[] s = (byte[])this[i]!;
+        byte[] s = (byte[])this[i];
         int available = s.Length - (int)fieldOffset;
         if (available <= 0)
             return 0;
@@ -231,7 +231,7 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     }
 
     /// <inheritdoc/>
-    public override char GetChar(int ordinal) => (char)this[ordinal]!;
+    public override char GetChar(int ordinal) => (char)this[ordinal];
 
     /// <inheritdoc/>
     public override long GetChars(
@@ -242,7 +242,7 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
         int length
     )
     {
-        string s = (string)this[i]!;
+        string s = (string)this[i];
         int available = s.Length - (int)fieldoffset;
         if (available <= 0)
             return 0;
@@ -267,19 +267,19 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     /// <inheritdoc/>
     public override DateTime GetDateTime(int i)
     {
-        return (DateTime)this[i]!;
+        return (DateTime)this[i];
     }
 
     /// <inheritdoc/>
     public override decimal GetDecimal(int ordinal)
     {
-        return (decimal)this[ordinal]!;
+        return (decimal)this[ordinal];
     }
 
     /// <inheritdoc/>
     public override double GetDouble(int ordinal)
     {
-        return (double)this[ordinal]!;
+        return (double)this[ordinal];
     }
 
     /// <inheritdoc/>
@@ -291,13 +291,13 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     /// <inheritdoc/>
     public override float GetFloat(int ordinal)
     {
-        return (float)this[ordinal]!;
+        return (float)this[ordinal];
     }
 
     /// <inheritdoc/>
     public override Guid GetGuid(int ordinal)
     {
-        return (Guid)this[ordinal]!;
+        return (Guid)this[ordinal];
     }
 
     /// <inheritdoc/>
@@ -309,13 +309,13 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     /// <inheritdoc/>
     public override int GetInt32(int ordinal)
     {
-        return (int)this[ordinal]!;
+        return (int)this[ordinal];
     }
 
     /// <inheritdoc/>
     public override long GetInt64(int ordinal)
     {
-        return (long)this[ordinal]!;
+        return (long)this[ordinal];
     }
 
     /// <inheritdoc/>
@@ -333,13 +333,13 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     /// <inheritdoc/>
     public override string GetString(int ordinal)
     {
-        return (string)this[ordinal]!;
+        return (string)this[ordinal];
     }
 
     /// <inheritdoc/>
     public override object GetValue(int ordinal)
     {
-        return this[ordinal]!;
+        return this[ordinal];
     }
 
     /// <inheritdoc/>

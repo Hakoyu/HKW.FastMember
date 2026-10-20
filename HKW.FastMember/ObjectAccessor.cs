@@ -41,7 +41,7 @@ public abstract class ObjectAccessor
     /// <exception cref="ArgumentNullException">目标为空</exception>
     public static ObjectAccessor Create(object source, bool allowNonPublicAccessors)
     {
-        ArgumentNullException.ThrowIfNull(source, nameof(source));
+        ArgumentNullException.ThrowIfNull(source);
         if (source is IDynamicMetaObjectProvider dlr)
             return new DynamicWrapper(dlr); // 使用DLR
         return new TypeAccessorWrapper(
