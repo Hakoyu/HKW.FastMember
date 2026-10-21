@@ -1,12 +1,10 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
 
 namespace HKW.FastMember.Benchmarks;
 
 [MemoryDiagnoser]
-[SimpleJob(RunStrategy.ColdStart, launchCount: 1, warmupCount: 0, iterationCount: 10, invocationCount: 1)]
 public class AccessorCreationBenchmarks
 {
     private static readonly ModuleBuilder Module = AssemblyBuilder
@@ -25,5 +23,9 @@ public class AccessorCreationBenchmarks
     }
 
     [Benchmark]
-    public TypeAccessor FirstAccessorCreation() => TypeAccessor.Create(_uncachedType);
+    public TypeAccessor FirstIlAccessorCreation() => TypeAccessor.Create(_uncachedType);
+
+    [Benchmark]
+    public TypeAccessor FirstExpressionAccessorCreation() =>
+        ExpressionTypeAccessor.Create(_uncachedType);
 }

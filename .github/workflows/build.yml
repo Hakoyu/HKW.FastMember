@@ -1,0 +1,50 @@
+name: build-and-publish
+on:
+  push:
+    tags:
+      - 'v*'   # 例如推送 v1.0.0 时触发
+
+jobs:
+  publish-nuget:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # 启用 OIDC Token
+      contents: read    # 读取仓库内容
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore ./HKW.FastMember.sln
+
+      - name: Build library and benchmark
+        run: dotnet build ./HKW.FastMember.sln --configuration Release --no-restore
+
+      - name: Test .NET 8
+        run: dotnet test ./HKW.FastMemberTest/HKW.FastMemberTest.csproj --configuration Release --framework net8.0 --no-build
+
+      - name: Test .NET 10
+        run: dotnet test ./HKW.FastMemberTest/HKW.FastMemberTest.csproj --configuration Release --framework net10.0 --no-build
+
+      - name: Pack library
+        run: dotnet pack ./HKW.FastMember/HKW.FastMember.csproj --configuration Release --no-build --output ./artifacts
+
+      # 登录并获取临时 API Key
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: Hakoyu   # NuGet.org 用户名
+          token-service-url: https://www.nuget.org/api/v2/token
+          audience: https://www.nuget.org
+
+      # 推送到 NuGet.org
+      - name: NuGet push
+        run: dotnet nuget push "./artifacts/*.nupkg" --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source "https://api.nuget.org/v3/index.json" --skip-duplicate

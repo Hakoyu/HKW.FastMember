@@ -12,10 +12,10 @@ internal class Program
             Job.Default.WithWarmupCount(10).WithIterationCount(10)
         );
         BenchmarkRunner.Run<PropertyReadBenchmarks>(config);
-        //BenchmarkRunner.Run<PropertyWriteBenchmarks>(config);
+        BenchmarkRunner.Run<PropertyWriteBenchmarks>(config);
         //BenchmarkRunner.Run<DynamicReadBenchmarks>(config);
         //BenchmarkRunner.Run<DynamicWriteBenchmarks>(config);
-        //BenchmarkRunner.Run<AccessorCreationBenchmarks>(config);
+        BenchmarkRunner.Run<AccessorCreationBenchmarks>(config);
         //BenchmarkRunner.Run<ObjectReaderBenchmarks>(config);
         //BenchmarkRunner.Run<ConcurrentAccessBenchmarks>(config);
     }
