@@ -188,7 +188,7 @@ public abstract class TypeAccessor
                 if (isByRef)
                 {
                     if (
-                        !isGet
+                        isGet is false
                         && prop.CustomAttributes.Any(x =>
                             x.AttributeType.FullName
                             == "System.Runtime.CompilerServices.IsReadOnlyAttribute"
@@ -204,7 +204,7 @@ public abstract class TypeAccessor
                     (isGet || isByRef)
                         ? prop.GetGetMethod(allowNonPublicAccessors)
                         : prop.GetSetMethod(allowNonPublicAccessors);
-                if (accessor == null && allowNonPublicAccessors && !isByRef)
+                if (accessor == null && allowNonPublicAccessors && isByRef is false)
                 {
                     // 没有getter/setter，如果存在则使用后备字段
                     var backingField = $"<{prop.Name}>k__BackingField";
@@ -220,7 +220,7 @@ public abstract class TypeAccessor
                 }
                 else if (
                     isValid
-                    && accessor != null
+                    && accessor is not null
                     && (isGet ? prop.CanRead : (prop.CanWrite || (isByRef && prop.CanRead)))
                 )
                 {
@@ -274,11 +274,6 @@ public abstract class TypeAccessor
                 il.Emit(OpCodes.Br, fail);
         }
     }
-
-    //private static readonly MethodInfo strinqEquals = typeof(string).GetMethod(
-    //    "op_Equality",
-    //    new Type[] { typeof(string), typeof(string) }
-    //);
 
     /// <summary>
     /// 基于类型实现的TypeAccessor，具有可用的成员元数据
@@ -342,11 +337,11 @@ public abstract class TypeAccessor
             Type = type;
         }
 
-        public override bool CreateNewSupported => _ctor != null;
+        public override bool CreateNewSupported => _ctor is not null;
 
         public override object CreateNew()
         {
-            return _ctor != null ? _ctor() : base.CreateNew();
+            return _ctor is not null ? _ctor() : base.CreateNew();
         }
 
         public override object this[object target, string name]
@@ -403,7 +398,7 @@ public abstract class TypeAccessor
     {
         while (type.IsNestedPublic)
             type = type.DeclaringType!;
-        if (!type.IsPublic)
+        if (type.IsPublic is false)
             return false;
 
         if (allowNonPublicAccessors)
@@ -411,10 +406,10 @@ public abstract class TypeAccessor
             for (int i = 0; i < props.Length; i++)
             {
                 // 非公开的getter
-                if (props[i].GetGetMethod(true) != null && props[i].GetGetMethod(false) == null)
+                if (props[i].GetGetMethod(true) is not null && props[i].GetGetMethod(false) is null)
                     return false;
                 // 非公开的setter
-                if (props[i].GetSetMethod(true) != null && props[i].GetSetMethod(false) == null)
+                if (props[i].GetSetMethod(true) is not null && props[i].GetSetMethod(false) is null)
                     return false;
             }
         }
@@ -436,7 +431,7 @@ public abstract class TypeAccessor
         int i = 0;
         foreach (var prop in props)
         {
-            if (!dic.ContainsKey(prop.Name) && prop.GetIndexParameters().Length == 0)
+            if (dic.ContainsKey(prop.Name) is false && prop.GetIndexParameters().Length == 0)
             {
                 dic.Add(prop.Name, i++);
                 members.Add(prop);
@@ -451,7 +446,7 @@ public abstract class TypeAccessor
 
         ConstructorInfo ctor = null!;
 
-        if (type.IsClass && !type.IsAbstract)
+        if (type.IsClass && type.IsAbstract is false)
         {
             ctor = type.GetConstructor(Type.EmptyTypes)!;
         }
@@ -490,7 +485,7 @@ public abstract class TypeAccessor
                 false
             );
             DynamicMethod? dynCtor = null;
-            if (ctor != null)
+            if (ctor is not null)
             {
                 dynCtor = new DynamicMethod(
                     type.FullName + "_ctor",
@@ -570,9 +565,11 @@ public abstract class TypeAccessor
             tb.DefineMethodOverride(body, baseSetter);
 
             MethodInfo baseMethod;
-            if (ctor != null)
+            if (ctor is not null)
             {
-                baseMethod = typeof(TypeAccessor).GetProperty("CreateNewSupported")!.GetGetMethod()!;
+                baseMethod = typeof(TypeAccessor)
+                    .GetProperty("CreateNewSupported")!
+                    .GetGetMethod()!;
                 body = tb.DefineMethod(
                     baseMethod.Name,
                     baseMethod.Attributes,
@@ -636,7 +633,8 @@ public abstract class TypeAccessor
             WriteTryMapImpl(il, type, members, mapField, allowNonPublicAccessors, false);
             tb.DefineMethodOverride(body, baseMethod);
 
-            var accessor = (TypeAccessor)Activator.CreateInstance(tb.CreateTypeInfo().AsType(), dic)!;
+            var accessor = (TypeAccessor)
+                Activator.CreateInstance(tb.CreateTypeInfo().AsType(), dic)!;
             return accessor;
         }
     }
@@ -694,7 +692,7 @@ public abstract class TypeAccessor
 
             void WriteField(FieldInfo fieldToAccess)
             {
-                if (!fieldToAccess.FieldType.IsByRef)
+                if (fieldToAccess.FieldType.IsByRef is false)
                 {
                     if (isGet)
                     {
@@ -733,7 +731,7 @@ public abstract class TypeAccessor
                 if (isByRef)
                 {
                     if (
-                        !isGet
+                        isGet is false
                         && prop.CustomAttributes.Any(x =>
                             x.AttributeType.FullName
                             == "System.Runtime.CompilerServices.IsReadOnlyAttribute"
@@ -765,8 +763,8 @@ public abstract class TypeAccessor
                 }
                 else if (
                     isValid
-                    && accessor != null
-                    && (isGet ? prop.CanRead : (prop.CanWrite || (isByRef && getter != null)))
+                    && accessor is not null
+                    && (isGet ? prop.CanRead : (prop.CanWrite || (isByRef && getter is not null)))
                 )
                 {
                     if (isGet)

@@ -353,7 +353,7 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     public override int GetOrdinal(string name)
     {
         var ordinal = Array.IndexOf(_memberNames, name);
-        return ordinal >= 0 ? ordinal : throw new IndexOutOfRangeException(name);
+        return ordinal >= 0 ? ordinal : throw new ArgumentOutOfRangeException(name);
     }
 
     /// <inheritdoc/>

@@ -34,7 +34,7 @@ public static class TypeHelpers
         BindingFlags bindingFlags = PublicInstance
     )
     {
-        ArgumentNullException.ThrowIfNull(type, nameof(type));
+        ArgumentNullException.ThrowIfNull(type);
         return type.GetTypeAndInterfaceProperties(bindingFlags)
             .Where(property => property.GetIndexParameters().Length == 0)
             .Cast<MemberInfo>()
@@ -68,7 +68,7 @@ public static class TypeHelpers
         BindingFlags bindingFlags = PublicInstance
     )
     {
-        ArgumentNullException.ThrowIfNull(type, nameof(type));
+        ArgumentNullException.ThrowIfNull(type);
         return type.GetTypeAndInterfaceProperties(bindingFlags)
             .Where(property => property.GetIndexParameters().Length == 0)
             .Cast<MemberInfo>()
