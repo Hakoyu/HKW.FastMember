@@ -49,3 +49,13 @@ using(var reader = ObjectReader.Create(data, "Id", "Name", "Description"))
 ### Ahead of Time
 Library emits IL code during runtime. Will not work in constrained Ahead of Time environments. Xamarin iOS and Unity IL2CPP are such.
 
+### Benchmarks
+
+Run the BenchmarkDotNet suite with:
+
+```powershell
+dotnet run -c Release --project HKW.FastMember.Benchmarks -f net10.0
+```
+
+Each benchmark suite is started explicitly in `HKW.FastMember.Benchmarks/Program.cs`; comment out any runner line that should not execute.
+

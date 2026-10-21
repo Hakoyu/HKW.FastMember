@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using Microsoft.CSharp.RuntimeBinder;
 
 namespace HKW.FastMember;
 
@@ -24,9 +25,10 @@ public abstract class TypeAccessor
     public virtual bool GetMembersSupported => false;
 
     // 哈希表比字典有更好的无锁读取语义
-    private static readonly ConcurrentDictionary<Type, TypeAccessor> _publicAccessors = new(),
+    private static readonly ConcurrentDictionary<Type, Lazy<TypeAccessor>> _publicAccessors = new(),
         _nonPublicAccessors = new();
 
+    private static readonly object _moduleLock = new();
     private static AssemblyBuilder? _assembly;
     private static ModuleBuilder? _module;
     private static int _counter;
@@ -76,10 +78,17 @@ public abstract class TypeAccessor
         ArgumentNullException.ThrowIfNull(type);
 
         var accessors = allowNonPublicAccessors ? _nonPublicAccessors : _publicAccessors;
-        if (accessors.TryGetValue(type, out var accessor))
-            return accessor;
-
-        return accessors[type] = CreateNew(type, allowNonPublicAccessors);
+        return accessors
+            .GetOrAdd(
+                type,
+                static (key, allowNonPublic) =>
+                    new Lazy<TypeAccessor>(
+                        () => CreateNew(key, allowNonPublic),
+                        LazyThreadSafetyMode.ExecutionAndPublication
+                    ),
+                allowNonPublicAccessors
+            )
+            .Value;
     }
 
     private static int GetNextCounterValue()
@@ -209,7 +218,11 @@ public abstract class TypeAccessor
                         WriteField(field);
                     }
                 }
-                else if (isValid && prop.CanRead && accessor != null)
+                else if (
+                    isValid
+                    && accessor != null
+                    && (isGet ? prop.CanRead : (prop.CanWrite || (isByRef && prop.CanRead)))
+                )
                 {
                     il.Emit(obj);
                     Cast(il, type, true); // 将输入对象转换为正确的目标类型
@@ -501,129 +514,131 @@ public abstract class TypeAccessor
             );
         }
 
-        // note 注意此区域是同步的；一次只创建一个，所以不需要担心构建器
-        if (_assembly == null)
+        lock (_moduleLock)
         {
-            var name = new AssemblyName("FastMember_dynamic");
-            _assembly = AssemblyBuilder.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
-            _module = _assembly.DefineDynamicModule(name.Name!);
-        }
-        TypeAttributes attribs = typeof(TypeAccessor).Attributes;
-        TypeBuilder tb = _module!.DefineType(
-            "FastMember_dynamic." + type.Name + "_" + GetNextCounterValue(),
-            (attribs | TypeAttributes.Sealed | TypeAttributes.Public)
-                & ~(TypeAttributes.Abstract | TypeAttributes.NotPublic),
-            typeof(RuntimeTypeAccessor)
-        );
+            if (_assembly == null)
+            {
+                var name = new AssemblyName("FastMember_dynamic");
+                _assembly = AssemblyBuilder.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
+                _module = _assembly.DefineDynamicModule(name.Name!);
+            }
+            TypeAttributes attribs = typeof(TypeAccessor).Attributes;
+            TypeBuilder tb = _module!.DefineType(
+                "FastMember_dynamic." + type.Name + "_" + GetNextCounterValue(),
+                (attribs | TypeAttributes.Sealed | TypeAttributes.Public)
+                    & ~(TypeAttributes.Abstract | TypeAttributes.NotPublic),
+                typeof(RuntimeTypeAccessor)
+            );
 
-        il = tb.DefineConstructor(
-                MethodAttributes.Public,
-                CallingConventions.Standard,
-                new[] { typeof(Dictionary<string, int>) }
-            )
-            .GetILGenerator();
-        il.Emit(OpCodes.Ldarg_0);
-        il.Emit(OpCodes.Ldarg_1);
-        FieldBuilder mapField = tb.DefineField(
-            "_dic",
-            typeof(Dictionary<string, int>),
-            FieldAttributes.InitOnly | FieldAttributes.Private
-        );
-        il.Emit(OpCodes.Stfld, mapField);
-        il.Emit(OpCodes.Ret);
+            il = tb.DefineConstructor(
+                    MethodAttributes.Public,
+                    CallingConventions.Standard,
+                    new[] { typeof(Dictionary<string, int>) }
+                )
+                .GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);
+            FieldBuilder mapField = tb.DefineField(
+                "_dic",
+                typeof(Dictionary<string, int>),
+                FieldAttributes.InitOnly | FieldAttributes.Private
+            );
+            il.Emit(OpCodes.Stfld, mapField);
+            il.Emit(OpCodes.Ret);
 
-        PropertyInfo indexer = typeof(TypeAccessor).GetProperty("Item")!;
-        var baseGetter = indexer.GetGetMethod()!;
-        var baseSetter = indexer.GetSetMethod()!;
-        var body = tb.DefineMethod(
-            baseGetter.Name,
-            baseGetter.Attributes & ~MethodAttributes.Abstract,
-            typeof(object),
-            new Type[] { typeof(object), typeof(string) }
-        );
-        il = body.GetILGenerator();
-        WriteMapImpl(il, type, members, mapField, allowNonPublicAccessors, true);
-        tb.DefineMethodOverride(body, baseGetter);
+            PropertyInfo indexer = typeof(TypeAccessor).GetProperty("Item")!;
+            var baseGetter = indexer.GetGetMethod()!;
+            var baseSetter = indexer.GetSetMethod()!;
+            var body = tb.DefineMethod(
+                baseGetter.Name,
+                baseGetter.Attributes & ~MethodAttributes.Abstract,
+                typeof(object),
+                new Type[] { typeof(object), typeof(string) }
+            );
+            il = body.GetILGenerator();
+            WriteMapImpl(il, type, members, mapField, allowNonPublicAccessors, true);
+            tb.DefineMethodOverride(body, baseGetter);
 
-        body = tb.DefineMethod(
-            baseSetter.Name,
-            baseSetter.Attributes & ~MethodAttributes.Abstract,
-            null,
-            new Type[] { typeof(object), typeof(string), typeof(object) }
-        );
-        il = body.GetILGenerator();
-        WriteMapImpl(il, type, members, mapField, allowNonPublicAccessors, false);
-        tb.DefineMethodOverride(body, baseSetter);
+            body = tb.DefineMethod(
+                baseSetter.Name,
+                baseSetter.Attributes & ~MethodAttributes.Abstract,
+                null,
+                new Type[] { typeof(object), typeof(string), typeof(object) }
+            );
+            il = body.GetILGenerator();
+            WriteMapImpl(il, type, members, mapField, allowNonPublicAccessors, false);
+            tb.DefineMethodOverride(body, baseSetter);
 
-        MethodInfo baseMethod;
-        if (ctor != null)
-        {
-            baseMethod = typeof(TypeAccessor).GetProperty("CreateNewSupported")!.GetGetMethod()!;
+            MethodInfo baseMethod;
+            if (ctor != null)
+            {
+                baseMethod = typeof(TypeAccessor).GetProperty("CreateNewSupported")!.GetGetMethod()!;
+                body = tb.DefineMethod(
+                    baseMethod.Name,
+                    baseMethod.Attributes,
+                    baseMethod.ReturnType,
+                    Type.EmptyTypes
+                );
+                il = body.GetILGenerator();
+                il.Emit(OpCodes.Ldc_I4_1);
+                il.Emit(OpCodes.Ret);
+                tb.DefineMethodOverride(body, baseMethod);
+
+                baseMethod = typeof(TypeAccessor).GetMethod("CreateNew")!;
+                body = tb.DefineMethod(
+                    baseMethod.Name,
+                    baseMethod.Attributes,
+                    baseMethod.ReturnType,
+                    Type.EmptyTypes
+                );
+                il = body.GetILGenerator();
+                il.Emit(OpCodes.Newobj, ctor);
+                il.Emit(OpCodes.Ret);
+                tb.DefineMethodOverride(body, baseMethod);
+            }
+
+            baseMethod = typeof(RuntimeTypeAccessor)
+                .GetProperty("Type", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .GetGetMethod(true)!;
             body = tb.DefineMethod(
                 baseMethod.Name,
-                baseMethod.Attributes,
+                baseMethod.Attributes & ~MethodAttributes.Abstract,
                 baseMethod.ReturnType,
                 Type.EmptyTypes
             );
             il = body.GetILGenerator();
-            il.Emit(OpCodes.Ldc_I4_1);
+            il.Emit(OpCodes.Ldtoken, type);
+            il.Emit(OpCodes.Call, typeof(Type).GetMethod("GetTypeFromHandle")!);
             il.Emit(OpCodes.Ret);
             tb.DefineMethodOverride(body, baseMethod);
 
-            baseMethod = typeof(TypeAccessor).GetMethod("CreateNew")!;
+            // 添加 TryGetValue 方法的 IL 编织
+            baseMethod = typeof(TypeAccessor).GetMethod("TryGetValue")!;
             body = tb.DefineMethod(
                 baseMethod.Name,
-                baseMethod.Attributes,
+                baseMethod.Attributes & ~MethodAttributes.Abstract,
                 baseMethod.ReturnType,
-                Type.EmptyTypes
+                new Type[] { typeof(object), typeof(string), typeof(object).MakeByRefType() }
             );
             il = body.GetILGenerator();
-            il.Emit(OpCodes.Newobj, ctor);
-            il.Emit(OpCodes.Ret);
+            WriteTryMapImpl(il, type, members, mapField, allowNonPublicAccessors, true);
             tb.DefineMethodOverride(body, baseMethod);
+
+            // 添加 TrySetValue 方法的 IL 编织
+            baseMethod = typeof(TypeAccessor).GetMethod("TrySetValue")!;
+            body = tb.DefineMethod(
+                baseMethod.Name,
+                baseMethod.Attributes & ~MethodAttributes.Abstract,
+                baseMethod.ReturnType,
+                new Type[] { typeof(object), typeof(string), typeof(object) }
+            );
+            il = body.GetILGenerator();
+            WriteTryMapImpl(il, type, members, mapField, allowNonPublicAccessors, false);
+            tb.DefineMethodOverride(body, baseMethod);
+
+            var accessor = (TypeAccessor)Activator.CreateInstance(tb.CreateTypeInfo().AsType(), dic)!;
+            return accessor;
         }
-
-        baseMethod = typeof(RuntimeTypeAccessor)
-            .GetProperty("Type", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .GetGetMethod(true)!;
-        body = tb.DefineMethod(
-            baseMethod.Name,
-            baseMethod.Attributes & ~MethodAttributes.Abstract,
-            baseMethod.ReturnType,
-            Type.EmptyTypes
-        );
-        il = body.GetILGenerator();
-        il.Emit(OpCodes.Ldtoken, type);
-        il.Emit(OpCodes.Call, typeof(Type).GetMethod("GetTypeFromHandle")!);
-        il.Emit(OpCodes.Ret);
-        tb.DefineMethodOverride(body, baseMethod);
-
-        // 添加 TryGetValue 方法的 IL 编织
-        baseMethod = typeof(TypeAccessor).GetMethod("TryGetValue")!;
-        body = tb.DefineMethod(
-            baseMethod.Name,
-            baseMethod.Attributes & ~MethodAttributes.Abstract,
-            baseMethod.ReturnType,
-            new Type[] { typeof(object), typeof(string), typeof(object).MakeByRefType() }
-        );
-        il = body.GetILGenerator();
-        WriteTryMapImpl(il, type, members, mapField, allowNonPublicAccessors, true);
-        tb.DefineMethodOverride(body, baseMethod);
-
-        // 添加 TrySetValue 方法的 IL 编织
-        baseMethod = typeof(TypeAccessor).GetMethod("TrySetValue")!;
-        body = tb.DefineMethod(
-            baseMethod.Name,
-            baseMethod.Attributes & ~MethodAttributes.Abstract,
-            baseMethod.ReturnType,
-            new Type[] { typeof(object), typeof(string), typeof(object) }
-        );
-        il = body.GetILGenerator();
-        WriteTryMapImpl(il, type, members, mapField, allowNonPublicAccessors, false);
-        tb.DefineMethodOverride(body, baseMethod);
-
-        var accessor = (TypeAccessor)Activator.CreateInstance(tb.CreateTypeInfo().AsType(), dic)!;
-        return accessor;
     }
 
     private static void WriteTryMapImpl(
@@ -873,11 +888,28 @@ internal sealed class DynamicAccessor : TypeAccessor
 
     public override bool TryGetValue(object target, string name, out object value)
     {
-        throw new NotImplementedException();
+        try
+        {
+            value = CallSiteCache.GetValue(name, target);
+            return true;
+        }
+        catch (RuntimeBinderException)
+        {
+            value = default!;
+            return false;
+        }
     }
 
     public override bool TrySetValue(object target, string name, object value)
     {
-        throw new NotImplementedException();
+        try
+        {
+            CallSiteCache.SetValue(name, target, value);
+            return true;
+        }
+        catch (RuntimeBinderException)
+        {
+            return false;
+        }
     }
 }

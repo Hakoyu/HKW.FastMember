@@ -15,7 +15,7 @@ public abstract partial class ObjectReader : DbDataReader
     static readonly Task<bool> _trueTaskResult = Task.FromResult(true);
     static readonly Task<bool> _falseTaskResult = Task.FromResult(false);
 
-    private sealed class AsyncObjectReader<T> : ObjectReader, IAsyncDisposable
+    private sealed class AsyncObjectReader<T> : ObjectReader
     {
         private IAsyncEnumerator<T>? _source;
 
@@ -27,32 +27,34 @@ public abstract partial class ObjectReader : DbDataReader
         )
             : base(type, members)
         {
-            if (source == null)
-                throw new ArgumentOutOfRangeException(nameof(source));
-
+            ArgumentNullException.ThrowIfNull(source);
             cancellationToken.ThrowIfCancellationRequested();
             _source = source.GetAsyncEnumerator(cancellationToken);
         }
 
-        ValueTask IAsyncDisposable.DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
             base.Shutdown();
-            var tmp = _source;
-            return tmp?.DisposeAsync() ?? default;
+            var source = Interlocked.Exchange(ref _source, null);
+            if (source is not null)
+                await source.DisposeAsync().ConfigureAwait(false);
+            GC.SuppressFinalize(this);
         }
 
         protected override void Shutdown()
         {
             base.Shutdown();
-            var tmp = _source;
-            _source = null!;
-            tmp?.DisposeAsync().AsTask().Wait();
+            var source = Interlocked.Exchange(ref _source, null);
+            source?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
 
         public override bool IsClosed => _source == null;
 
         public override Task<bool> ReadAsync(CancellationToken cancellationToken)
         {
+            if (cancellationToken.IsCancellationRequested)
+                return Task.FromCanceled<bool>(cancellationToken);
+
             static async Task<bool> FromAsync(AsyncObjectReader<T> reader, ValueTask<bool> pending)
             {
                 if (await pending.ConfigureAwait(false))

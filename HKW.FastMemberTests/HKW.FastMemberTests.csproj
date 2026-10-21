@@ -5,8 +5,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <SonarQubeExclude>True</SonarQubeExclude>
-    <OutputType>WinExe</OutputType>
-    <StartupObject>HKW.FastMember.Tests.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>

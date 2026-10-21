@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Dynamic;
+using Microsoft.CSharp.RuntimeBinder;
 
 namespace HKW.FastMember;
 
@@ -162,11 +163,28 @@ internal sealed class DynamicWrapper : ObjectAccessor
 
     public override bool TryGetValue(string name, out object value)
     {
-        throw new NotImplementedException();
+        try
+        {
+            value = CallSiteCache.GetValue(name, Source);
+            return true;
+        }
+        catch (RuntimeBinderException)
+        {
+            value = default!;
+            return false;
+        }
     }
 
     public override bool TrySetValue(string name, object value)
     {
-        throw new NotImplementedException();
+        try
+        {
+            CallSiteCache.SetValue(name, Source, value);
+            return true;
+        }
+        catch (RuntimeBinderException)
+        {
+            return false;
+        }
     }
 }

@@ -36,9 +36,12 @@ public static class TypeHelpers
     {
         ArgumentNullException.ThrowIfNull(type, nameof(type));
         return type.GetTypeAndInterfaceProperties(bindingFlags)
+            .Where(property => property.GetIndexParameters().Length == 0)
             .Cast<MemberInfo>()
             .Concat(type.GetFields(bindingFlags).Cast<MemberInfo>())
-            .OrderBy(x => x.Name)
+            .GroupBy(member => member.Name, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderBy(member => member.Name, StringComparer.Ordinal)
             .Select(member => new Member(member))
             .ToImmutableArray();
     }
@@ -66,12 +69,13 @@ public static class TypeHelpers
     )
     {
         ArgumentNullException.ThrowIfNull(type, nameof(type));
-        return type.GetTypeAndInterfaceProperties(PublicInstance)
+        return type.GetTypeAndInterfaceProperties(bindingFlags)
+            .Where(property => property.GetIndexParameters().Length == 0)
             .Cast<MemberInfo>()
-            .Concat(type.GetFields(PublicInstance).Cast<MemberInfo>())
-            .OrderBy(x => x.Name)
-            .Select(member => new Member(member))
-            .ToImmutableDictionary(x => x.Name, x => x);
+            .Concat(type.GetFields(bindingFlags).Cast<MemberInfo>())
+            .GroupBy(member => member.Name, StringComparer.Ordinal)
+            .Select(group => new Member(group.First()))
+            .ToImmutableDictionary(member => member.Name, member => member, StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -84,6 +88,6 @@ public static class TypeHelpers
         BindingFlags bindingFlags = PublicInstance
     )
     {
-        return GetMembersDictionary(typeof(T));
+        return GetMembersDictionary(typeof(T), bindingFlags);
     }
 }

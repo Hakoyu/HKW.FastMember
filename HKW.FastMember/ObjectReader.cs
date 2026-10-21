@@ -56,7 +56,9 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
             );
         }
         // 按序号首先排序成员，然后按名称排序。
-        var typeMembers = _accessor.GetMembers().OrderBy(p => p.Ordinal).ToArray();
+        var typeMembers = _accessor.GetMembersSupported
+            ? _accessor.GetMembers().OrderBy(p => p.Ordinal).ToArray()
+            : [];
 
         if (isEmptyMembers)
         {
@@ -220,13 +222,17 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
         int length
     )
     {
-        byte[] s = (byte[])this[i];
-        int available = s.Length - (int)fieldOffset;
+        byte[] source = (byte[])this[i];
+        if (buffer is null)
+            return source.Length;
+
+        ValidateBufferArguments(fieldOffset, bufferoffset, length, buffer.Length);
+        int available = source.Length - (int)fieldOffset;
         if (available <= 0)
             return 0;
 
         int count = Math.Min(length, available);
-        Buffer.BlockCopy(s, (int)fieldOffset, buffer!, bufferoffset, count);
+        Buffer.BlockCopy(source, (int)fieldOffset, buffer, bufferoffset, count);
         return count;
     }
 
@@ -242,14 +248,33 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
         int length
     )
     {
-        string s = (string)this[i];
-        int available = s.Length - (int)fieldoffset;
+        string source = (string)this[i];
+        if (buffer is null)
+            return source.Length;
+
+        ValidateBufferArguments(fieldoffset, bufferoffset, length, buffer.Length);
+        int available = source.Length - (int)fieldoffset;
         if (available <= 0)
             return 0;
 
         int count = Math.Min(length, available);
-        s.CopyTo((int)fieldoffset, buffer!, bufferoffset, count);
+        source.CopyTo((int)fieldoffset, buffer, bufferoffset, count);
         return count;
+    }
+
+    private static void ValidateBufferArguments(
+        long fieldOffset,
+        int bufferOffset,
+        int length,
+        int bufferLength
+    )
+    {
+        if (fieldOffset < 0 || fieldOffset > int.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(fieldOffset));
+        ArgumentOutOfRangeException.ThrowIfNegative(bufferOffset);
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
+        if (bufferOffset > bufferLength - length)
+            throw new ArgumentException("The requested range exceeds the destination buffer.");
     }
 
     /// <inheritdoc/>
@@ -327,7 +352,8 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     /// <inheritdoc/>
     public override int GetOrdinal(string name)
     {
-        return Array.IndexOf(_memberNames, name);
+        var ordinal = Array.IndexOf(_memberNames, name);
+        return ordinal >= 0 ? ordinal : throw new IndexOutOfRangeException(name);
     }
 
     /// <inheritdoc/>

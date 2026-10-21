@@ -36,19 +36,18 @@ internal static class CallSiteCache
     /// <returns>成员的值</returns>
     internal static object GetValue(string name, object target)
     {
-        if (_getters.TryGetValue(name, out var callSite) is false)
-        {
-            // 如果缓存中不存在此成员的调用站点，则创建一个新的
-            _getters[name] = callSite = CallSite<Func<CallSite, object, object>>.Create(
-                Binder.GetMember(
-                    CSharpBinderFlags.None,
-                    name,
-                    typeof(CallSiteCache),
-                    [CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)]
+        var callSite = _getters.GetOrAdd(
+            name,
+            static memberName =>
+                CallSite<Func<CallSite, object, object>>.Create(
+                    Binder.GetMember(
+                        CSharpBinderFlags.None,
+                        memberName,
+                        typeof(CallSiteCache),
+                        [CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)]
+                    )
                 )
-            );
-        }
-        // 使用调用站点获取目标对象上指定成员的值
+        );
         return callSite.Target(callSite, target);
     }
 
@@ -60,22 +59,24 @@ internal static class CallSiteCache
     /// <param name="value">要设置的值</param>
     internal static void SetValue(string name, object target, object value)
     {
-        if (_setters.TryGetValue(name, out var callSite) is false)
-        {
-            // 如果缓存中不存在此成员的调用站点，则创建一个新的
-            _setters[name] = callSite = CallSite<Func<CallSite, object, object, object>>.Create(
-                Binder.SetMember(
-                    CSharpBinderFlags.None,
-                    name,
-                    typeof(CallSiteCache),
-                    [
-                        CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                        CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.UseCompileTimeType, null),
-                    ]
+        var callSite = _setters.GetOrAdd(
+            name,
+            static memberName =>
+                CallSite<Func<CallSite, object, object, object>>.Create(
+                    Binder.SetMember(
+                        CSharpBinderFlags.None,
+                        memberName,
+                        typeof(CallSiteCache),
+                        [
+                            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                            CSharpArgumentInfo.Create(
+                                CSharpArgumentInfoFlags.UseCompileTimeType,
+                                null
+                            ),
+                        ]
+                    )
                 )
-            );
-        }
-        // 使用调用站点设置目标对象上指定成员的值
+        );
         callSite.Target(callSite, target, value);
     }
 }
