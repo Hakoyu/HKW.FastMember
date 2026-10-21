@@ -28,10 +28,10 @@ jobs:
         run: dotnet build ./HKW.FastMember.sln --configuration Release --no-restore
 
       - name: Test .NET 8
-        run: dotnet test ./HKW.FastMemberTest/HKW.FastMemberTest.csproj --configuration Release --framework net8.0 --no-build
+        run: dotnet test ./HKW.FastMemberTests/HKW.FastMemberTests.csproj --configuration Release --framework net8.0 --no-build
 
       - name: Test .NET 10
-        run: dotnet test ./HKW.FastMemberTest/HKW.FastMemberTest.csproj --configuration Release --framework net10.0 --no-build
+        run: dotnet test ./HKW.FastMemberTests/HKW.FastMemberTests.csproj --configuration Release --framework net10.0 --no-build
 
       - name: Pack library
         run: dotnet pack ./HKW.FastMember/HKW.FastMember.csproj --configuration Release --no-build --output ./artifacts
