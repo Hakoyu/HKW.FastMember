@@ -70,10 +70,12 @@ public sealed class TypeHelpersTests
     [TestMethod]
     public void GetMembers_DiscoversInheritedClassAndInterfaceMembers()
     {
-        var classNames = TypeHelpers.GetMembers<DerivedModel>()
+        var classNames = TypeHelpers
+            .GetMembers<DerivedModel>()
             .Select(member => member.Name)
             .ToArray();
-        var interfaceNames = TypeHelpers.GetMembers<IDerivedContract>()
+        var interfaceNames = TypeHelpers
+            .GetMembers<IDerivedContract>()
             .Select(member => member.Name)
             .ToArray();
 
@@ -90,7 +92,8 @@ public sealed class TypeHelpersTests
     [TestMethod]
     public void GetMembers_DeduplicatesHiddenAndRepeatedInterfaceNames()
     {
-        var hidden = TypeHelpers.GetMembers<HiddenDerivedModel>()
+        var hidden = TypeHelpers
+            .GetMembers<HiddenDerivedModel>()
             .Where(member => member.Name == nameof(HiddenDerivedModel.Value))
             .ToArray();
         var combined = TypeHelpers.GetMembers<ICombinedContract>();
@@ -112,7 +115,9 @@ public sealed class TypeHelpersTests
             .Select(member => member.Name)
             .ToArray();
         var nonPublicNames = TypeHelpers
-            .GetMembers<MemberModel>(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .GetMembers<MemberModel>(
+                BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly
+            )
             .Select(member => member.Name)
             .ToArray();
 

@@ -36,9 +36,9 @@ public class ObjectReaderAsyncTests
     [TestMethod]
     public async Task Create_WithExplicitColumns_PreservesColumnOrder()
     {
-        var source = new TrackingAsyncEnumerable<MemberModel>(
-            [new MemberModel { Name = "value", Number = 42 }]
-        );
+        var source = new TrackingAsyncEnumerable<MemberModel>([
+            new MemberModel { Name = "value", Number = 42 },
+        ]);
         var reader = ObjectReader.Create(source, "Number", "Name");
 
         Assert.AreEqual(2, reader.FieldCount);
@@ -109,9 +109,7 @@ public class ObjectReaderAsyncTests
     [TestMethod]
     public async Task ReadAsync_WithPreCanceledToken_ReturnsCanceledTaskWithoutAdvancing()
     {
-        var source = new TrackingAsyncEnumerable<MemberModel>(
-            [new MemberModel { Name = "value" }]
-        );
+        var source = new TrackingAsyncEnumerable<MemberModel>([new MemberModel { Name = "value" }]);
         var reader = ObjectReader.Create(source, "Name");
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
@@ -151,9 +149,7 @@ public class ObjectReaderAsyncTests
     [TestMethod]
     public async Task Close_DisposesEnumeratorOnceAndClosesReader()
     {
-        var source = new TrackingAsyncEnumerable<MemberModel>(
-            [new MemberModel { Name = "value" }]
-        );
+        var source = new TrackingAsyncEnumerable<MemberModel>([new MemberModel { Name = "value" }]);
         var reader = ObjectReader.Create(source, "Name");
 
         reader.Close();
@@ -170,9 +166,7 @@ public class ObjectReaderAsyncTests
     [TestMethod]
     public async Task Dispose_DisposesEnumeratorOnceAndClosesReader()
     {
-        var source = new TrackingAsyncEnumerable<MemberModel>(
-            [new MemberModel { Name = "value" }]
-        );
+        var source = new TrackingAsyncEnumerable<MemberModel>([new MemberModel { Name = "value" }]);
         var reader = ObjectReader.Create(source, "Name");
 
         reader.Dispose();
@@ -188,9 +182,7 @@ public class ObjectReaderAsyncTests
     [TestMethod]
     public async Task DisposeAsync_DisposesEnumeratorOnceAndClosesReader()
     {
-        var source = new TrackingAsyncEnumerable<MemberModel>(
-            [new MemberModel { Name = "value" }]
-        );
+        var source = new TrackingAsyncEnumerable<MemberModel>([new MemberModel { Name = "value" }]);
         var reader = ObjectReader.Create(source, "Name");
 
         await reader.DisposeAsync();

@@ -16,11 +16,19 @@ public sealed class ErrorContractTests
         var objectAccessor = ObjectAccessor.Create(new MemberModel());
         var model = new MemberModel();
 
-        Assert.ThrowsExactly<NullReferenceException>(() => _ = typeAccessor[null!, nameof(MemberModel.Name)]);
-        Assert.ThrowsExactly<ArgumentNullException>(() => typeAccessor.TryGetValue(model, null!, out _));
-        Assert.ThrowsExactly<ArgumentNullException>(() => typeAccessor.TrySetValue(model, null!, "value"));
+        Assert.ThrowsExactly<NullReferenceException>(() =>
+            _ = typeAccessor[null!, nameof(MemberModel.Name)]
+        );
+        Assert.ThrowsExactly<ArgumentNullException>(() =>
+            typeAccessor.TryGetValue(model, null!, out _)
+        );
+        Assert.ThrowsExactly<ArgumentNullException>(() =>
+            typeAccessor.TrySetValue(model, null!, "value")
+        );
         Assert.ThrowsExactly<ArgumentNullException>(() => objectAccessor.TryGetValue(null!, out _));
-        Assert.ThrowsExactly<ArgumentNullException>(() => objectAccessor.TrySetValue(null!, "value"));
+        Assert.ThrowsExactly<ArgumentNullException>(() =>
+            objectAccessor.TrySetValue(null!, "value")
+        );
     }
 
     [TestMethod]
@@ -30,10 +38,18 @@ public sealed class ErrorContractTests
         var typeAccessor = TypeAccessor.Create(typeof(MemberModel));
         var objectAccessor = ObjectAccessor.Create(model);
 
-        var typeGet = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _ = typeAccessor[model, "Missing"]);
-        var typeSet = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => typeAccessor[model, "Missing"] = 1);
-        var objectGet = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _ = objectAccessor["Missing"]);
-        var objectSet = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => objectAccessor["Missing"] = 1);
+        var typeGet = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            _ = typeAccessor[model, "Missing"]
+        );
+        var typeSet = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            typeAccessor[model, "Missing"] = 1
+        );
+        var objectGet = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            _ = objectAccessor["Missing"]
+        );
+        var objectSet = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            objectAccessor["Missing"] = 1
+        );
 
         Assert.AreEqual("name", typeGet.ParamName);
         Assert.AreEqual("name", typeSet.ParamName);
@@ -54,12 +70,24 @@ public sealed class ErrorContractTests
         var typeAccessor = TypeAccessor.Create(typeof(MemberModel));
         var objectAccessor = ObjectAccessor.Create(model);
 
-        Assert.ThrowsExactly<InvalidCastException>(() => _ = typeAccessor[new object(), nameof(MemberModel.Name)]);
-        Assert.ThrowsExactly<InvalidCastException>(() => typeAccessor[model, nameof(MemberModel.Number)] = "wrong");
-        Assert.ThrowsExactly<InvalidCastException>(() => typeAccessor.TrySetValue(model, nameof(MemberModel.Number), "wrong"));
-        Assert.ThrowsExactly<NullReferenceException>(() => typeAccessor[model, nameof(MemberModel.Number)] = null!);
-        Assert.ThrowsExactly<InvalidCastException>(() => objectAccessor[nameof(MemberModel.Number)] = "wrong");
-        Assert.ThrowsExactly<NullReferenceException>(() => objectAccessor.TrySetValue(nameof(MemberModel.Number), null!));
+        Assert.ThrowsExactly<InvalidCastException>(() =>
+            _ = typeAccessor[new object(), nameof(MemberModel.Name)]
+        );
+        Assert.ThrowsExactly<InvalidCastException>(() =>
+            typeAccessor[model, nameof(MemberModel.Number)] = "wrong"
+        );
+        Assert.ThrowsExactly<InvalidCastException>(() =>
+            typeAccessor.TrySetValue(model, nameof(MemberModel.Number), "wrong")
+        );
+        Assert.ThrowsExactly<NullReferenceException>(() =>
+            typeAccessor[model, nameof(MemberModel.Number)] = null!
+        );
+        Assert.ThrowsExactly<InvalidCastException>(() =>
+            objectAccessor[nameof(MemberModel.Number)] = "wrong"
+        );
+        Assert.ThrowsExactly<NullReferenceException>(() =>
+            objectAccessor.TrySetValue(nameof(MemberModel.Number), null!)
+        );
         Assert.AreEqual(7, model.Number);
     }
 
@@ -84,15 +112,25 @@ public sealed class ErrorContractTests
         var model = new MemberModel();
         var accessor = TypeAccessor.Create(typeof(MemberModel));
 
-        Assert.IsFalse(accessor.TrySetValue(model, nameof(MemberModel.ReadOnlyProperty), "changed"));
-        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => accessor[model, nameof(MemberModel.ReadOnlyProperty)] = "changed");
+        Assert.IsFalse(
+            accessor.TrySetValue(model, nameof(MemberModel.ReadOnlyProperty), "changed")
+        );
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            accessor[model, nameof(MemberModel.ReadOnlyProperty)] = "changed"
+        );
         Assert.AreEqual("read-only", accessor[model, nameof(MemberModel.ReadOnlyProperty)]);
 
-        Assert.IsTrue(accessor.TrySetValue(model, nameof(MemberModel.WriteOnlyProperty), "written"));
+        Assert.IsTrue(
+            accessor.TrySetValue(model, nameof(MemberModel.WriteOnlyProperty), "written")
+        );
         Assert.AreEqual("written", model.GetWriteOnlyValue());
-        Assert.IsFalse(accessor.TryGetValue(model, nameof(MemberModel.WriteOnlyProperty), out var value));
+        Assert.IsFalse(
+            accessor.TryGetValue(model, nameof(MemberModel.WriteOnlyProperty), out var value)
+        );
         Assert.IsNull(value);
-        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _ = accessor[model, nameof(MemberModel.WriteOnlyProperty)]);
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            _ = accessor[model, nameof(MemberModel.WriteOnlyProperty)]
+        );
     }
 
     [TestMethod]
@@ -102,14 +140,48 @@ public sealed class ErrorContractTests
         var typeAccessor = TypeAccessor.Create(typeof(ThrowingAccessorModel));
         var objectAccessor = ObjectAccessor.Create(model);
 
-        AssertUserException(() => _ = typeAccessor[model, nameof(ThrowingAccessorModel.ThrowingGetter)], "getter failed");
-        AssertUserException(() => typeAccessor.TryGetValue(model, nameof(ThrowingAccessorModel.ThrowingGetter), out _), "getter failed");
-        AssertUserException(() => typeAccessor[model, nameof(ThrowingAccessorModel.ThrowingSetter)] = "value", "setter failed");
-        AssertUserException(() => typeAccessor.TrySetValue(model, nameof(ThrowingAccessorModel.ThrowingSetter), "value"), "setter failed");
-        AssertUserException(() => _ = objectAccessor[nameof(ThrowingAccessorModel.ThrowingGetter)], "getter failed");
-        AssertUserException(() => objectAccessor.TryGetValue(nameof(ThrowingAccessorModel.ThrowingGetter), out _), "getter failed");
-        AssertUserException(() => objectAccessor[nameof(ThrowingAccessorModel.ThrowingSetter)] = "value", "setter failed");
-        AssertUserException(() => objectAccessor.TrySetValue(nameof(ThrowingAccessorModel.ThrowingSetter), "value"), "setter failed");
+        AssertUserException(
+            () => _ = typeAccessor[model, nameof(ThrowingAccessorModel.ThrowingGetter)],
+            "getter failed"
+        );
+        AssertUserException(
+            () =>
+                typeAccessor.TryGetValue(
+                    model,
+                    nameof(ThrowingAccessorModel.ThrowingGetter),
+                    out _
+                ),
+            "getter failed"
+        );
+        AssertUserException(
+            () => typeAccessor[model, nameof(ThrowingAccessorModel.ThrowingSetter)] = "value",
+            "setter failed"
+        );
+        AssertUserException(
+            () =>
+                typeAccessor.TrySetValue(
+                    model,
+                    nameof(ThrowingAccessorModel.ThrowingSetter),
+                    "value"
+                ),
+            "setter failed"
+        );
+        AssertUserException(
+            () => _ = objectAccessor[nameof(ThrowingAccessorModel.ThrowingGetter)],
+            "getter failed"
+        );
+        AssertUserException(
+            () => objectAccessor.TryGetValue(nameof(ThrowingAccessorModel.ThrowingGetter), out _),
+            "getter failed"
+        );
+        AssertUserException(
+            () => objectAccessor[nameof(ThrowingAccessorModel.ThrowingSetter)] = "value",
+            "setter failed"
+        );
+        AssertUserException(
+            () => objectAccessor.TrySetValue(nameof(ThrowingAccessorModel.ThrowingSetter), "value"),
+            "setter failed"
+        );
     }
 
     private static void AssertUserException(Action action, string expectedMessage)

@@ -96,9 +96,33 @@ public abstract class TypeAccessor
         return Interlocked.Increment(ref _counter);
     }
 
+    private const int LinearLookupThreshold = 4;
+
     static readonly MethodInfo _tryGetValue = typeof(Dictionary<string, int>).GetMethod(
         nameof(Dictionary<string, int>.TryGetValue)
     )!;
+
+    static readonly MethodInfo _stringEquals = typeof(string).GetMethod(
+        nameof(string.Equals),
+        [typeof(string), typeof(string)]
+    )!;
+
+    private static void EmitLinearLookup(
+        ILGenerator il,
+        List<MemberInfo> members,
+        Label[] labels,
+        Label failure
+    )
+    {
+        for (var i = 0; i < members.Count; i++)
+        {
+            il.Emit(OpCodes.Ldarg_2);
+            il.Emit(OpCodes.Ldstr, members[i].Name);
+            il.EmitCall(OpCodes.Call, _stringEquals, null);
+            il.Emit(OpCodes.Brtrue, labels[i]);
+        }
+        il.Emit(OpCodes.Br, failure);
+    }
 
     private static void WriteMapImpl(
         ILGenerator il,
@@ -110,37 +134,45 @@ public abstract class TypeAccessor
     )
     {
         OpCode obj,
-            index,
             value;
 
         Label fail = il.DefineLabel();
-        if (mapField == null)
-        {
-            index = OpCodes.Ldarg_0;
-            obj = OpCodes.Ldarg_1;
-            value = OpCodes.Ldarg_2;
-        }
-        else
-        {
-            il.DeclareLocal(typeof(int));
-            index = OpCodes.Ldloc_0;
-            obj = OpCodes.Ldarg_1;
-            value = OpCodes.Ldarg_3;
-
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, mapField);
-            il.Emit(OpCodes.Ldarg_2);
-            il.Emit(OpCodes.Ldloca_S, (byte)0);
-            il.EmitCall(OpCodes.Callvirt, _tryGetValue, null);
-            il.Emit(OpCodes.Brfalse, fail);
-        }
         var labels = new Label[members.Count];
         for (int i = 0; i < labels.Length; i++)
         {
             labels[i] = il.DefineLabel();
         }
-        il.Emit(index);
-        il.Emit(OpCodes.Switch, labels);
+
+        if (mapField == null)
+        {
+            obj = OpCodes.Ldarg_1;
+            value = OpCodes.Ldarg_2;
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Switch, labels);
+        }
+        else
+        {
+            obj = OpCodes.Ldarg_1;
+            value = OpCodes.Ldarg_3;
+
+            if (members.Count <= LinearLookupThreshold)
+            {
+                EmitLinearLookup(il, members, labels, fail);
+            }
+            else
+            {
+                il.DeclareLocal(typeof(int));
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldfld, mapField);
+                il.Emit(OpCodes.Ldarg_2);
+                il.Emit(OpCodes.Ldloca_S, (byte)0);
+                il.EmitCall(OpCodes.Callvirt, _tryGetValue, null);
+                il.Emit(OpCodes.Brfalse, fail);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Switch, labels);
+            }
+        }
+
         il.MarkLabel(fail);
         il.Emit(OpCodes.Ldstr, "name");
         il.Emit(
@@ -648,31 +680,30 @@ public abstract class TypeAccessor
         bool isGet
     )
     {
-        // 声明局部变量：int index
-        il.DeclareLocal(typeof(int));
-
-        // 加载字典、名称参数并调用 TryGetValue
-        il.Emit(OpCodes.Ldarg_0);
-        il.Emit(OpCodes.Ldfld, mapField);
-        il.Emit(OpCodes.Ldarg_2); // name 参数
-        il.Emit(OpCodes.Ldloca_S, (byte)0); // index 局部变量的地址
-        il.EmitCall(OpCodes.Callvirt, _tryGetValue, null);
-
-        // 如果 TryGetValue 返回 false，跳转到返回 false
         Label returnFalse = il.DefineLabel();
-        il.Emit(OpCodes.Brfalse, returnFalse);
-
         var labels = new Label[members.Count];
         for (int i = 0; i < labels.Length; i++)
         {
             labels[i] = il.DefineLabel();
         }
 
-        // switch 基于索引
-        il.Emit(OpCodes.Ldloc_0); // 加载 index
-        il.Emit(OpCodes.Switch, labels);
+        if (members.Count <= LinearLookupThreshold)
+        {
+            EmitLinearLookup(il, members, labels, returnFalse);
+        }
+        else
+        {
+            il.DeclareLocal(typeof(int));
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldfld, mapField);
+            il.Emit(OpCodes.Ldarg_2);
+            il.Emit(OpCodes.Ldloca_S, (byte)0);
+            il.EmitCall(OpCodes.Callvirt, _tryGetValue, null);
+            il.Emit(OpCodes.Brfalse, returnFalse);
+            il.Emit(OpCodes.Ldloc_0);
+            il.Emit(OpCodes.Switch, labels);
+        }
 
-        // 如果索引超出范围，返回 false
         il.MarkLabel(returnFalse);
         if (isGet)
         {

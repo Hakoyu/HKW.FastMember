@@ -11,7 +11,12 @@ public sealed class ObjectReaderTests
     [TestMethod]
     public void Create_WithoutColumns_UsesOrdinalMetadataOrder()
     {
-        var row = new OrdinalModel { First = 1, Middle = "two", Last = "three" };
+        var row = new OrdinalModel
+        {
+            First = 1,
+            Middle = "two",
+            Last = "three",
+        };
         using var reader = ObjectReader.Create([row]);
 
         Assert.AreEqual(3, reader.FieldCount);
@@ -28,8 +33,18 @@ public sealed class ObjectReaderTests
     {
         var rows = new[]
         {
-            new PartiallyOrdinalModel { First = "one", Middle = 1, Last = 10 },
-            new PartiallyOrdinalModel { First = "two", Middle = null, Last = 20 },
+            new PartiallyOrdinalModel
+            {
+                First = "one",
+                Middle = 1,
+                Last = 10,
+            },
+            new PartiallyOrdinalModel
+            {
+                First = "two",
+                Middle = null,
+                Last = 20,
+            },
         };
         var table = new DataTable();
 
@@ -57,15 +72,22 @@ public sealed class ObjectReaderTests
     public void Create_WithColumns_PreservesOrderAndUsesExactCaseNames()
     {
         using var reader = ObjectReader.Create(
-            [new OrdinalModel { First = 7, Middle = "middle", Last = "last" }],
+            [
+                new OrdinalModel
+                {
+                    First = 7,
+                    Middle = "middle",
+                    Last = "last",
+                },
+            ],
             nameof(OrdinalModel.Last),
             nameof(OrdinalModel.First)
         );
 
         Assert.AreEqual(0, reader.GetOrdinal(nameof(OrdinalModel.Last)));
         Assert.AreEqual(1, reader.GetOrdinal(nameof(OrdinalModel.First)));
-        Assert.ThrowsExactly<IndexOutOfRangeException>(() => reader.GetOrdinal("last"));
-        Assert.ThrowsExactly<IndexOutOfRangeException>(() => reader.GetOrdinal("Missing"));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => reader.GetOrdinal("last"));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => reader.GetOrdinal("Missing"));
 
         Assert.IsTrue(reader.Read());
         Assert.AreEqual("last", reader[nameof(OrdinalModel.Last)]);
@@ -102,9 +124,9 @@ public sealed class ObjectReaderTests
     [TestMethod]
     public void NullValues_AreExposedAsDBNull()
     {
-        using var reader = ObjectReader.Create(
-            [new NullableModel { NullableNumber = null, NullableText = null }]
-        );
+        using var reader = ObjectReader.Create([
+            new NullableModel { NullableNumber = null, NullableText = null },
+        ]);
 
         Assert.IsTrue(reader.Read());
         Assert.AreSame(DBNull.Value, reader.GetValue(0));
@@ -135,10 +157,18 @@ public sealed class ObjectReaderTests
         };
         string[] columns =
         [
-            nameof(TypedModel.Boolean), nameof(TypedModel.Byte), nameof(TypedModel.Character),
-            nameof(TypedModel.DateTime), nameof(TypedModel.Decimal), nameof(TypedModel.Double),
-            nameof(TypedModel.Float), nameof(TypedModel.Guid), nameof(TypedModel.Int16),
-            nameof(TypedModel.Int32), nameof(TypedModel.Int64), nameof(TypedModel.String),
+            nameof(TypedModel.Boolean),
+            nameof(TypedModel.Byte),
+            nameof(TypedModel.Character),
+            nameof(TypedModel.DateTime),
+            nameof(TypedModel.Decimal),
+            nameof(TypedModel.Double),
+            nameof(TypedModel.Float),
+            nameof(TypedModel.Guid),
+            nameof(TypedModel.Int16),
+            nameof(TypedModel.Int32),
+            nameof(TypedModel.Int64),
+            nameof(TypedModel.String),
         ];
         using var reader = ObjectReader.Create([row], columns);
 
@@ -162,9 +192,9 @@ public sealed class ObjectReaderTests
     [TestMethod]
     public void GetValues_CopiesOnlyAvailableDestinationSlots()
     {
-        using var reader = ObjectReader.Create(
-            [new NullableModel { NullableNumber = 42, NullableText = null }]
-        );
+        using var reader = ObjectReader.Create([
+            new NullableModel { NullableNumber = 42, NullableText = null },
+        ]);
         Assert.IsTrue(reader.Read());
 
         var shortBuffer = new object[1];
@@ -235,8 +265,8 @@ public sealed class ObjectReaderTests
         using var reader = ObjectReader.Create([new BufferModel { Bytes = [1], Text = "a" }]);
         Assert.IsTrue(reader.Read());
 
-        var exception = Assert.Throws<Exception>(
-            () => reader.GetBytes(0, fieldOffset, new byte[3], bufferOffset, length)
+        var exception = Assert.Throws<Exception>(() =>
+            reader.GetBytes(0, fieldOffset, new byte[3], bufferOffset, length)
         );
         Assert.AreEqual(exceptionType, exception.GetType());
     }
@@ -257,8 +287,8 @@ public sealed class ObjectReaderTests
         using var reader = ObjectReader.Create([new BufferModel { Bytes = [1], Text = "a" }]);
         Assert.IsTrue(reader.Read());
 
-        var exception = Assert.Throws<Exception>(
-            () => reader.GetChars(1, fieldOffset, new char[3], bufferOffset, length)
+        var exception = Assert.Throws<Exception>(() =>
+            reader.GetChars(1, fieldOffset, new char[3], bufferOffset, length)
         );
         Assert.AreEqual(exceptionType, exception.GetType());
     }
@@ -266,9 +296,9 @@ public sealed class ObjectReaderTests
     [TestMethod]
     public void ReaderState_RequiresCurrentRowAndClearsItAfterEnd()
     {
-        using var reader = ObjectReader.Create(
-            [new NullableModel { NullableNumber = 1, NullableText = "one" }]
-        );
+        using var reader = ObjectReader.Create([
+            new NullableModel { NullableNumber = 1, NullableText = "one" },
+        ]);
 
         Assert.Throws<Exception>(() => reader.GetValue(0));
         Assert.IsTrue(reader.Read());
@@ -341,7 +371,15 @@ public sealed class ObjectReaderTests
     [TestMethod]
     public void PublicFactoryAndSchemaApis_HandleNullMembersEmptySchemaAndNullSource()
     {
-        PartiallyOrdinalModel[] rows = [new() { First = "one", Middle = 1, Last = 2 }];
+        PartiallyOrdinalModel[] rows =
+        [
+            new()
+            {
+                First = "one",
+                Middle = 1,
+                Last = 2,
+            },
+        ];
         using var reader = ObjectReader.Create(rows, (string[])null!);
 
         Assert.AreEqual(3, reader.FieldCount);
@@ -350,10 +388,7 @@ public sealed class ObjectReaderTests
 
         using var emptySchemaReader = ObjectReader.Create(new[] { new EmptyModel() });
         Assert.HasCount(0, emptySchemaReader.GetSchemaTable().Rows);
-        Assert.HasCount(
-            0,
-            ((IDbColumnSchemaGenerator)emptySchemaReader).GetColumnSchema()
-        );
+        Assert.HasCount(0, ((IDbColumnSchemaGenerator)emptySchemaReader).GetColumnSchema());
 
         var nullSourceError = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
             ObjectReader.Create((IEnumerable<MemberModel>)null!, nameof(MemberModel.Name))
@@ -381,9 +416,7 @@ public sealed class ObjectReaderTests
     public void DynamicRows_RequireExplicitMembersAndAreReadableWhenProvided()
     {
         var row = DynamicModelFactory.Create("Value", 42);
-        Assert.ThrowsExactly<InvalidOperationException>(() =>
-            ObjectReader.Create(new[] { row })
-        );
+        Assert.ThrowsExactly<InvalidOperationException>(() => ObjectReader.Create(new[] { row }));
 
         using var reader = ObjectReader.Create(new[] { row }, "Value");
 
@@ -451,19 +484,19 @@ public sealed class ObjectReaderTests
     {
         public int DisposeCount { get; private set; }
 
-        public IEnumerator<T> GetEnumerator() => new TrackingEnumerator(this, items.GetEnumerator());
+        public IEnumerator<T> GetEnumerator() =>
+            new TrackingEnumerator(this, items.GetEnumerator());
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        private sealed class TrackingEnumerator(
-            TrackingEnumerable<T> owner,
-            IEnumerator<T> inner
-        ) : IEnumerator<T>
+        private sealed class TrackingEnumerator(TrackingEnumerable<T> owner, IEnumerator<T> inner)
+            : IEnumerator<T>
         {
             public T Current => inner.Current;
             object IEnumerator.Current => Current!;
 
             public bool MoveNext() => inner.MoveNext();
+
             public void Reset() => inner.Reset();
 
             public void Dispose()

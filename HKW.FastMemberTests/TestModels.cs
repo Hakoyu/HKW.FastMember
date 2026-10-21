@@ -213,9 +213,7 @@ public sealed class TrackingAsyncEnumerable<T> : IAsyncEnumerable<T>
     public int MoveNextCount { get; private set; }
     public int DisposeCount { get; private set; }
 
-    public IAsyncEnumerator<T> GetAsyncEnumerator(
-        CancellationToken cancellationToken = default
-    )
+    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
         EnumeratorCancellationToken = cancellationToken;
         return new Enumerator(this);

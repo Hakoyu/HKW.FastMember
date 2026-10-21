@@ -50,13 +50,17 @@ public sealed class MemberTests
         Assert.AreEqual(0, first.Ordinal);
         Assert.IsTrue(first.IsDefined<OrdinalAttribute>());
         Assert.IsTrue(first.IsDefined(typeof(OrdinalAttribute)));
-        Assert.AreEqual((ushort)0, ((OrdinalAttribute)first.GetAttribute<OrdinalAttribute>()!).Ordinal);
+        Assert.AreEqual(
+            (ushort)0,
+            ((OrdinalAttribute)first.GetAttribute<OrdinalAttribute>()!).Ordinal
+        );
         Assert.AreEqual(
             (ushort)0,
             ((OrdinalAttribute)first.GetAttribute(typeof(OrdinalAttribute))!).Ordinal
         );
 
-        var unconfigured = TypeHelpers.GetMembers<MemberModel>()
+        var unconfigured = TypeHelpers
+            .GetMembers<MemberModel>()
             .Single(member => member.Name == nameof(MemberModel.Name));
         Assert.AreEqual(-1, unconfigured.Ordinal);
         Assert.IsFalse(unconfigured.IsDefined<OrdinalAttribute>());
@@ -66,7 +70,8 @@ public sealed class MemberTests
     [TestMethod]
     public void OrdinalOrdering_PutsDefaultsFirstAndPreservesDuplicateOrder()
     {
-        var ordered = TypeHelpers.GetMembers<MixedOrdinalModel>()
+        var ordered = TypeHelpers
+            .GetMembers<MixedOrdinalModel>()
             .OrderBy(member => member.Ordinal)
             .Select(member => member.Name)
             .ToArray();
@@ -85,9 +90,11 @@ public sealed class MemberTests
     [TestMethod]
     public void EqualityAndString_UseReferenceIdentityAndDefaultTypeText()
     {
-        var first = TypeHelpers.GetMembers<MemberModel>()
+        var first = TypeHelpers
+            .GetMembers<MemberModel>()
             .Single(member => member.Name == nameof(MemberModel.Name));
-        var second = TypeHelpers.GetMembers<MemberModel>()
+        var second = TypeHelpers
+            .GetMembers<MemberModel>()
             .Single(member => member.Name == nameof(MemberModel.Name));
 
         Assert.AreSame(first.MemberInfo, second.MemberInfo);

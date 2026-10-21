@@ -79,11 +79,18 @@ public sealed class TypeAccessorTests
     public void AllowNonPublicAccessors_ControlsPrivateSetterButDoesNotAddPrivateMembers()
     {
         var publicAccessor = TypeAccessor.Create(typeof(MemberModel));
-        var nonPublicAccessor = TypeAccessor.Create(typeof(MemberModel), allowNonPublicAccessors: true);
+        var nonPublicAccessor = TypeAccessor.Create(
+            typeof(MemberModel),
+            allowNonPublicAccessors: true
+        );
         var model = new MemberModel();
 
-        Assert.IsFalse(publicAccessor.TrySetValue(model, nameof(MemberModel.IndexedValue), "public"));
-        Assert.IsTrue(nonPublicAccessor.TrySetValue(model, nameof(MemberModel.IndexedValue), "non-public"));
+        Assert.IsFalse(
+            publicAccessor.TrySetValue(model, nameof(MemberModel.IndexedValue), "public")
+        );
+        Assert.IsTrue(
+            nonPublicAccessor.TrySetValue(model, nameof(MemberModel.IndexedValue), "non-public")
+        );
         Assert.AreEqual("non-public", model.IndexedValue);
 
         Assert.IsFalse(nonPublicAccessor.TryGetValue(model, "PrivateProperty", out _));
