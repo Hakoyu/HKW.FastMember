@@ -33,6 +33,6 @@
       Visible="false"
     />
     <None Include="..\LICENSE.txt" Pack="true" PackagePath="/" />
-    <None Update="Readme.md" Pack="true" PackagePath="/" />
+    <None Include="Readme.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>

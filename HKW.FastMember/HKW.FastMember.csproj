@@ -38,9 +38,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HKW.FastMember.Abstractions\HKW.FastMember.Abstractions.csproj" />
-    <None Include="..\Readme.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
+    <None Include="../Readme.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>
