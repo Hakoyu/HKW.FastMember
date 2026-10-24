@@ -9,11 +9,21 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMemberTests", "HKW.FastMemberTests\HKW.FastMemberTests.csproj", "{DD68AEB4-B46D-4981-BAD3-6EA4E76B67C8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.Tests", "HKW.FastMember.Tests\HKW.FastMember.Tests.csproj", "{DD68AEB4-B46D-4981-BAD3-6EA4E76B67C8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.Benchmarks", "HKW.FastMember.Benchmarks\HKW.FastMember.Benchmarks.csproj", "{ADFB7F87-D98B-4DC9-9A68-A67F7DFFB7B6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.AotDiagnostics", "HKW.FastMember.AotDiagnostics\HKW.FastMember.AotDiagnostics.csproj", "{8A6D9677-BFF9-4498-B14A-0461BCC2991C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.Generater", "HKW.FastMember.Generater\HKW.FastMember.Generater.csproj", "{081394DD-4717-4116-8B9F-1079A22F0395}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.Generater.SourceGenerator", "HKW.FastMember.Generater.SourceGenerator\HKW.FastMember.Generater.SourceGenerator.csproj", "{3C0F5BF7-323A-4530-AEA5-9F933DED8CAF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.Generater.Tests", "HKW.FastMember.Generater.Tests\HKW.FastMember.Generater.Tests.csproj", "{FE7840AF-836B-4272-B6C4-84D5B7C8CC49}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.Abstractions", "HKW.FastMember.Abstractions\HKW.FastMember.Abstractions.csproj", "{5CBDD029-D78C-474F-A93F-EA27370D8901}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.Abstractions.Tests", "HKW.FastMember.Abstractions.Tests\HKW.FastMember.Abstractions.Tests.csproj", "{13095EA1-C172-4527-BDB6-44909427F546}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,6 +47,26 @@ Global
 		{8A6D9677-BFF9-4498-B14A-0461BCC2991C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A6D9677-BFF9-4498-B14A-0461BCC2991C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A6D9677-BFF9-4498-B14A-0461BCC2991C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{081394DD-4717-4116-8B9F-1079A22F0395}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{081394DD-4717-4116-8B9F-1079A22F0395}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{081394DD-4717-4116-8B9F-1079A22F0395}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{081394DD-4717-4116-8B9F-1079A22F0395}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C0F5BF7-323A-4530-AEA5-9F933DED8CAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C0F5BF7-323A-4530-AEA5-9F933DED8CAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C0F5BF7-323A-4530-AEA5-9F933DED8CAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C0F5BF7-323A-4530-AEA5-9F933DED8CAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE7840AF-836B-4272-B6C4-84D5B7C8CC49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE7840AF-836B-4272-B6C4-84D5B7C8CC49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE7840AF-836B-4272-B6C4-84D5B7C8CC49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE7840AF-836B-4272-B6C4-84D5B7C8CC49}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CBDD029-D78C-474F-A93F-EA27370D8901}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CBDD029-D78C-474F-A93F-EA27370D8901}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CBDD029-D78C-474F-A93F-EA27370D8901}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5CBDD029-D78C-474F-A93F-EA27370D8901}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13095EA1-C172-4527-BDB6-44909427F546}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13095EA1-C172-4527-BDB6-44909427F546}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13095EA1-C172-4527-BDB6-44909427F546}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13095EA1-C172-4527-BDB6-44909427F546}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

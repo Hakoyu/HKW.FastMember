@@ -1,8 +1,8 @@
 [*.cs]
 
-# Default severity for all analyzer diagnostics
+# 所有分析器诊断的默认严重级别
 dotnet_analyzer_diagnostic.severity = none
 
-# Keep deployment diagnostics visible even when general style analysis is disabled.
+# 即使禁用常规代码风格分析，也保留部署诊断。
 dotnet_analyzer_diagnostic.category-Trimming.severity = warning
 dotnet_analyzer_diagnostic.category-AOT.severity = warning

@@ -9,18 +9,18 @@ public abstract class PropertyAccessBenchmarks
 {
     protected const string MemberName = nameof(BenchmarkModel.Value);
     protected readonly BenchmarkModel Model = new() { Value = 42 };
-    protected readonly TypeAccessor Accessor = TypeAccessor.Create(typeof(BenchmarkModel));
+    protected readonly Abstractions.TypeAccessor Accessor = TypeAccessor.Create(typeof(BenchmarkModel));
 
     //protected readonly TypeAccessor ExpressionAccessor = ExpressionTypeAccessor.Create(
     //    typeof(BenchmarkModel)
     //);
     protected readonly PropertyInfo Property = typeof(BenchmarkModel).GetProperty(MemberName)!;
-    protected ObjectAccessor ObjectAccessor = null!;
+    protected Abstractions.ObjectAccessor ObjectAccessor = null!;
 
     [GlobalSetup]
     public void Setup()
     {
-        ObjectAccessor = ObjectAccessor.Create(Model);
+        ObjectAccessor = global::HKW.FastMember.ObjectAccessor.Create(Model);
 
         //if (
         //    (int)ExpressionAccessor[Model, MemberName] != Model.Value
@@ -118,7 +118,7 @@ public abstract class DynamicAccessBenchmarks
 {
     protected const string MemberName = "Value";
     protected dynamic Dynamic = null!;
-    protected ObjectAccessor Accessor = null!;
+    protected Abstractions.ObjectAccessor Accessor = null!;
 
     [GlobalSetup]
     public void Setup()

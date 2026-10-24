@@ -1,0 +1,10 @@
+[*.cs]
+# 保留的源生成诊断；覆盖仓库默认的严重性级别。
+dotnet_diagnostic.HFMG001.severity = error
+dotnet_diagnostic.HFMG002.severity = error
+dotnet_diagnostic.HFMG003.severity = error
+dotnet_diagnostic.HFMG004.severity = error
+dotnet_diagnostic.HFMG005.severity = error
+dotnet_diagnostic.HFMG006.severity = error
+dotnet_diagnostic.HFMG007.severity = error
+dotnet_diagnostic.HFMG008.severity = error

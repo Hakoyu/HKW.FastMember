@@ -6,7 +6,7 @@ namespace HKW.FastMember.Benchmarks;
 public class ConcurrentAccessBenchmarks
 {
     private const int OperationCount = 1_024;
-    private readonly TypeAccessor _accessor = TypeAccessor.Create(typeof(BenchmarkModel));
+    private readonly Abstractions.TypeAccessor _accessor = TypeAccessor.Create(typeof(BenchmarkModel));
     private readonly BenchmarkModel[] _models = Enumerable
         .Range(0, OperationCount)
         .Select(i => new BenchmarkModel { Value = i })

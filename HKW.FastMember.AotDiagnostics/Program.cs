@@ -2,6 +2,7 @@ using System.Collections;
 using System.Dynamic;
 using System.Runtime.CompilerServices;
 using HKW.FastMember;
+using Contracts = HKW.FastMember.Abstractions;
 
 var supportsDynamicCode = RuntimeFeature.IsDynamicCodeSupported;
 var checkedFactories = 0;
@@ -20,7 +21,7 @@ try
     ((IDictionary<string, object?>)expando)["Value"] = 1;
     var dynamicRow = new DynamicRow();
 
-    // These direct calls intentionally produce IL3050/IL2026 in the consumer.
+    // 这些直接调用刻意在调用方触发 IL3050/IL2026 诊断。
     Check("TypeAccessor/public", () => TypeAccessor.Create(typeof(Row)), row);
     Check("TypeAccessor/public-mode", () => TypeAccessor.Create(typeof(Row), false), row);
     Check("TypeAccessor/non-public-type", () => TypeAccessor.Create(typeof(HiddenRow)), hidden);
@@ -72,15 +73,15 @@ void Check(string name, Func<object> factory, object? target)
 
     switch (factory())
     {
-        case TypeAccessor accessor:
+        case Contracts.TypeAccessor accessor:
             accessor[target!, "Value"] = 42;
             Require(Equals(accessor[target!, "Value"], 42), name);
             break;
-        case ObjectAccessor accessor:
+        case Contracts.ObjectAccessor accessor:
             accessor["Value"] = 42;
             Require(Equals(accessor["Value"], 42), name);
             break;
-        case ObjectReader reader:
+        case Contracts.ObjectReader reader:
             using (reader)
             {
                 Require(reader.Read() && reader.GetInt32(0) == 1, name);
@@ -92,7 +93,7 @@ void Check(string name, Func<object> factory, object? target)
     }
 }
 
-async Task CheckAsyncReader(string name, Func<ObjectReader> factory)
+async Task CheckAsyncReader(string name, Func<Contracts.ObjectReader> factory)
 {
     checkedFactories++;
     if (!supportsDynamicCode)

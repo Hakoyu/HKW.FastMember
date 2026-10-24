@@ -26,7 +26,7 @@ public class AccessorCreationBenchmarks
     }
 
     [Benchmark]
-    public TypeAccessor FirstIlAccessorCreation() => TypeAccessor.Create(_uncachedType);
+    public Abstractions.TypeAccessor FirstIlAccessorCreation() => TypeAccessor.Create(_uncachedType);
 
     //[Benchmark]
     //public TypeAccessor FirstExpressionAccessorCreation() =>

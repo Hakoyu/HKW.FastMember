@@ -1,99 +1,104 @@
-﻿using System.Collections.Immutable;
-using System.Reflection;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 
 namespace HKW.FastMember;
 
 /// <summary>
-/// 快速成员工具
+/// 仅基于反射的元数据查询; BindingFlags 可指定超出访问器公开实例成员范围的查询
 /// </summary>
 public static class TypeHelpers
 {
-    const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
+    private const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
 
     /// <summary>
-    /// 如果类型是一个类，获取其属性；如果类型是一个接口，获取其属性以及它继承的所有接口的属性。
+    /// 返回反射发现的属性, 包括继承的接口属性
     /// </summary>
-    /// <param name="type">类型</param>
-    /// <param name="flags">标志</param>
-    /// <returns>所有属性成员</returns>
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static PropertyInfo[] GetTypeAndInterfaceProperties(this Type type, BindingFlags flags)
     {
-        return !type.IsInterface
+        ArgumentNullException.ThrowIfNull(type);
+        return type.IsInterface is false
             ? type.GetProperties(flags)
-            : type.GetInterfaces().Concat([type]).SelectMany(i => i.GetProperties(flags)).ToArray();
+            : new[] { type }
+                .Concat(
+                    type.GetInterfaces()
+                        .OrderByDescending(t => t.GetInterfaces().Length)
+                        .ThenBy(t => t.FullName, StringComparer.Ordinal)
+                )
+                .SelectMany(t => t.GetProperties(flags))
+                .ToArray();
     }
 
     /// <summary>
-    /// 获取类型的成员
+    /// 返回与指定标志匹配、经过排序和去重的反射描述
     /// </summary>
-    /// <param name="type">类型</param>
-    /// <param name="bindingFlags">标志</param>
-    /// <returns>所有目标成员</returns>
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public static ImmutableArray<Member> GetMembers(
+    public static ImmutableArray<ReflectionMember> GetMembers(
         Type type,
         BindingFlags bindingFlags = PublicInstance
-    )
-    {
-        ArgumentNullException.ThrowIfNull(type);
-        return type.GetTypeAndInterfaceProperties(bindingFlags)
-            .Where(property => property.GetIndexParameters().Length == 0)
-            .Cast<MemberInfo>()
-            .Concat(type.GetFields(bindingFlags).Cast<MemberInfo>())
-            .GroupBy(member => member.Name, StringComparer.Ordinal)
-            .Select(group => group.First())
-            .OrderBy(member => member.Name, StringComparer.Ordinal)
-            .Select(member => new Member(member))
+    ) =>
+        DiscoverMembers(type, bindingFlags, (bindingFlags & BindingFlags.NonPublic) != 0)
             .ToImmutableArray();
-    }
 
     /// <summary>
-    /// 获取类型的成员
+    /// 返回类型 T 中与指定标志匹配的反射描述
     /// </summary>
-    /// <typeparam name="T">类型</typeparam>
-    /// <param name="bindingFlags">标志</param>
-    /// <returns>所有目标成员</returns>
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public static IEnumerable<Member> GetMembers<T>(BindingFlags bindingFlags = PublicInstance)
-    {
-        return GetMembers(typeof(T), bindingFlags);
-    }
+    public static IEnumerable<ReflectionMember> GetMembers<T>(
+        BindingFlags bindingFlags = PublicInstance
+    ) => GetMembers(typeof(T), bindingFlags);
 
     /// <summary>
-    /// 获取类型的成员字典 (MemberName, Member)
+    /// 返回以成员名称为键的描述字典, 名称按序号比较并区分大小写
     /// </summary>
-    /// <param name="type">类型</param>
-    /// <param name="bindingFlags">标志</param>
-    /// <returns>所有目标成员字典</returns>
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public static ImmutableDictionary<string, Member> GetMembersDictionary(
+    public static ImmutableDictionary<string, ReflectionMember> GetMembersDictionary(
         this Type type,
         BindingFlags bindingFlags = PublicInstance
+    ) =>
+        GetMembers(type, bindingFlags)
+            .ToImmutableDictionary(m => m.Name, m => m, StringComparer.Ordinal);
+
+    /// <summary>
+    /// 返回类型 T 的描述字典, 以成员名称为键, 名称按序号比较并区分大小写
+    /// </summary>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
+    public static ImmutableDictionary<string, ReflectionMember> GetMembersDictionary<T>(
+        BindingFlags bindingFlags = PublicInstance
+    ) => GetMembersDictionary(typeof(T), bindingFlags);
+
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
+    internal static IEnumerable<ReflectionMember> DiscoverMembers(
+        Type type,
+        BindingFlags flags,
+        bool nonPublic
     )
     {
         ArgumentNullException.ThrowIfNull(type);
-        return type.GetTypeAndInterfaceProperties(bindingFlags)
-            .Where(property => property.GetIndexParameters().Length == 0)
+        return type.GetTypeAndInterfaceProperties(flags)
+            .Where(p => p.GetIndexParameters().Length == 0)
             .Cast<MemberInfo>()
-            .Concat(type.GetFields(bindingFlags).Cast<MemberInfo>())
-            .GroupBy(member => member.Name, StringComparer.Ordinal)
-            .Select(group => new Member(group.First()))
-            .ToImmutableDictionary(member => member.Name, member => member, StringComparer.Ordinal);
+            .Concat(type.GetFields(flags))
+            .OrderBy(m => DeclaringDistance(type, m.DeclaringType!))
+            .ThenBy(m => m.DeclaringType!.FullName, StringComparer.Ordinal)
+            .GroupBy(m => m.Name, StringComparer.Ordinal)
+            .Select(g => g.First())
+            .OrderBy(m => m.Name, StringComparer.Ordinal)
+            .Select(m => new ReflectionMember(m, nonPublic));
     }
 
-    /// <summary>
-    /// 获取类型的成员字典 (MemberName, Member)
-    /// </summary>
-    /// <typeparam name="T">类型</typeparam>
-    /// <param name="bindingFlags">标志</param>
-    /// <returns>所有目标成员字典</returns>
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public static ImmutableDictionary<string, Member> GetMembersDictionary<T>(
-        BindingFlags bindingFlags = PublicInstance
-    )
+    private static int DeclaringDistance(Type type, Type declaring)
     {
-        return GetMembersDictionary(typeof(T), bindingFlags);
+        if (type == declaring)
+            return 0;
+        if (type.IsInterface)
+            return 1 + type.GetInterfaces().Length - declaring.GetInterfaces().Length;
+        var distance = 0;
+        for (var current = type; current is not null; current = current.BaseType, distance++)
+            if (current == declaring)
+                return distance;
+        return int.MaxValue;
     }
 }

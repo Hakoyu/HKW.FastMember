@@ -1,203 +1,42 @@
-﻿using System.Collections.Immutable;
-using System.Dynamic;
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.CSharp.RuntimeBinder;
 
 namespace HKW.FastMember;
 
 /// <summary>
-/// 表示单个对象，允许通过名称访问成员
+/// 使用反射创建公共对象包装器; 泛型重载采用静态类型 T 的契约
 /// </summary>
-public abstract class ObjectAccessor
+public static class ObjectAccessor
 {
-    /// <inheritdoc/>
-    protected ObjectAccessor(object source)
-    {
-        Source = source ?? throw new ArgumentNullException(nameof(source));
-    }
-
     /// <summary>
-    /// 获取或设置基础对象的指定名称成员的值
+    /// 根据源对象的运行时类型创建包装器，支持动态绑定
     /// </summary>
-    public abstract object this[string name] { get; set; }
-
-    /// <summary>
-    /// 此实例所代表的对象
-    /// </summary>
-    public object Source { get; protected set; }
-
-    #region Create
-    /// <summary>
-    /// 为对象创建访问器
-    /// </summary>
-    /// <param name="source">对象</param>
-    /// <returns>访问器</returns>
     [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public static ObjectAccessor Create(object source)
-    {
-        return Create(source, false);
-    }
+    public static Abstractions.ObjectAccessor Create(object source) => Create(source, false);
 
     /// <summary>
-    /// 包装单个对象，允许通过名称访问该实例
+    /// 根据源对象的运行时类型及所选访问器可见性创建包装器
     /// </summary>
-    /// <exception cref="ArgumentNullException">目标为空</exception>
-    /// <exception cref="PlatformNotSupportedException">Runtime dynamic code generation is unavailable.</exception>
     [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public static ObjectAccessor Create(object source, bool allowNonPublicAccessors)
+    public static Abstractions.ObjectAccessor Create(object source, bool allowNonPublicAccessors)
     {
         ArgumentNullException.ThrowIfNull(source);
-        DeploymentRequirements.EnsureDynamicCodeSupported();
-        if (source is IDynamicMetaObjectProvider dlr)
-            return new DynamicWrapper(dlr); // 使用DLR
-        return new TypeAccessorWrapper(
-            source,
-            TypeAccessor.Create(source.GetType(), allowNonPublicAccessors)
-        );
+        return new(source, TypeAccessor.Create(source.GetType(), allowNonPublicAccessors));
     }
-    #endregion
-
-    #region TypeAccessor
 
     /// <summary>
-    /// 尝试获取成员值
+    /// 根据静态类型 T 的契约及所选访问器可见性创建源对象包装器
     /// </summary>
-    /// <param name="name">成员名称</param>
-    /// <param name="value">成员值</param>
-    /// <returns>成功为 <see langword="true"/>, 失败为 <see langword="false"/></returns>
-    public abstract bool TryGetValue(string name, out object value);
-
-    /// <summary>
-    /// 尝试设置成员值
-    /// </summary>
-    /// <param name="name">成员名称</param>
-    /// <param name="value">成员值</param>
-    /// <returns>成功为 <see langword="true"/>, 失败为 <see langword="false"/></returns>
-    public abstract bool TrySetValue(string name, object value);
-
-    /// <summary>
-    /// 获取此类型可用的成员
-    /// </summary>
-    /// <returns>可用成员</returns>
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public virtual ImmutableArray<Member> GetMembers()
+    public static Abstractions.ObjectAccessor<T> Create<T>(
+        T source,
+        bool allowNonPublicAccessors = false
+    )
+        where T : class
     {
-        throw new NotSupportedException();
-    }
-
-    /// <summary>
-    /// 获取此类型可用的成员字典
-    /// </summary>
-    /// <returns>成员字典</returns>
-    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public virtual ImmutableDictionary<string, Member> GetMemberDictionary()
-    {
-        throw new NotSupportedException();
-    }
-
-    #endregion
-
-    #region Other
-    /// <inheritdoc/>
-    public override bool Equals(object? obj)
-    {
-        return Source.Equals(obj);
-    }
-
-    /// <summary>
-    /// 获取目标对象的哈希值
-    /// </summary>
-    public override int GetHashCode()
-    {
-        return Source.GetHashCode();
-    }
-
-    /// <inheritdoc/>
-    public override string ToString()
-    {
-        return Source.ToString()!;
-    }
-    #endregion
-}
-
-internal sealed class TypeAccessorWrapper : ObjectAccessor
-{
-    public readonly TypeAccessor Accessor;
-
-    public TypeAccessorWrapper(object source, TypeAccessor accessor)
-        : base(source)
-    {
-        Accessor = accessor;
-    }
-
-    public override object this[string name]
-    {
-        get => Accessor[Source, name];
-        set => Accessor[Source, name] = value;
-    }
-
-    public override bool TryGetValue(string name, out object value)
-    {
-        return Accessor.TryGetValue(Source, name, out value);
-    }
-
-    public override bool TrySetValue(string name, object value)
-    {
-        return Accessor.TrySetValue(Source, name, value);
-    }
-
-    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public override ImmutableArray<Member> GetMembers()
-    {
-        return Accessor.GetMembers();
-    }
-
-    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-    public override ImmutableDictionary<string, Member> GetMemberDictionary()
-    {
-        return Accessor.GetMemberDictionary();
-    }
-}
-
-[RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
-[RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
-internal sealed class DynamicWrapper : ObjectAccessor
-{
-    public DynamicWrapper(IDynamicMetaObjectProvider source)
-        : base(source) { }
-
-    public override object this[string name]
-    {
-        get => CallSiteCache.GetValue(name, Source);
-        set => CallSiteCache.SetValue(name, Source, value);
-    }
-
-    public override bool TryGetValue(string name, out object value)
-    {
-        try
-        {
-            value = CallSiteCache.GetValue(name, Source);
-            return true;
-        }
-        catch (RuntimeBinderException)
-        {
-            value = default!;
-            return false;
-        }
-    }
-
-    public override bool TrySetValue(string name, object value)
-    {
-        try
-        {
-            CallSiteCache.SetValue(name, Source, value);
-            return true;
-        }
-        catch (RuntimeBinderException)
-        {
-            return false;
-        }
+        ArgumentNullException.ThrowIfNull(source);
+        return new(source, TypeAccessor.Create<T>(allowNonPublicAccessors));
     }
 }

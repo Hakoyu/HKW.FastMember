@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IsRoslynComponent>true</IsRoslynComponent>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 引用的包 -->
+    <PackageReference
+      Include="HKW.SourceGeneratorUtils"
+      Version="0.2.3"
+      PrivateAssets="all"
+      GeneratePathProperty="true"
+    />
+    <!-- 与生成器放在同一目录；单包打包项由运行时项目持有。 -->
+    <None
+      Include="$(PkgHKW_SourceGeneratorUtils)\lib\netstandard2.0\HKW.SourceGeneratorUtils.dll"
+      Link="HKW.SourceGeneratorUtils.dll"
+      CopyToOutputDirectory="PreserveNewest"
+      Visible="false"
+    />
+    <!-- 项目分析器必须引用包, 否则 FileNotFoundException -->
+    <Analyzer Include="$(PkgHKW_SourceGeneratorUtils)\lib\netstandard2.0\*.dll" />
+  </ItemGroup>
+</Project>

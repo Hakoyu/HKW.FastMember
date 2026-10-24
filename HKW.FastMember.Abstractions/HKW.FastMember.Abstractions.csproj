@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <LangVersion>12.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>HKW.FastMember.Abstractions</PackageId>
+    <Title>HKW.FastMember.Abstractions</Title>
+    <Version>0.1.0</Version>
+    <Authors>HKW</Authors>
+    <Description>Backend-independent member access contracts and immutable metadata.</Description>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <PackageReadmeFile>Readme.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\LICENSE.txt" Pack="true" PackagePath="/" />
+    <None Update="Readme.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>

@@ -37,6 +37,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\HKW.FastMember.Abstractions\HKW.FastMember.Abstractions.csproj" />
     <None Include="..\Readme.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>

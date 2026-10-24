@@ -2,9 +2,30 @@
 
 `HKW.FastMember` 是一个面向现代 .NET 的高性能成员访问库。当类型或成员名称只能在运行时确定时，它可以用接近直接访问的方式读取、写入对象的字段和属性，并可将对象序列包装为 ADO.NET `DbDataReader`。
 
+
 ## 原始参考项目
 
 [fast-member](https://github.com/mgravell/fast-member)
+
+## 共享抽象与两个后端
+
+| 包 | 职责 |
+|---|---|
+| [HKW.FastMember.Abstractions](HKW.FastMember.Abstractions/Readme.md) | 公共泛型/非泛型访问器、纯成员描述 `Member`、唯一序号特性 `OrdinalAttribute`、同步/异步读取器 |
+| HKW.FastMember | 反射发现、Emit/DLR 访问核心及独立工厂/缓存 |
+| [HKW.FastMember.Generater](HKW.FastMember.Generater/Readme.md) | 编译期生成访问核心及独立工厂/注册；同包包含分析器 |
+
+两个后端各自正常依赖 `HKW.FastMember.Abstractions`，互不引用；公共层不选择后端。没有自动回退或全局后端解析。源生成后端没有 Emit、DLR、反射访问或 `Expression.Compile` 后备。两个后端返回相同的公共类型，读取器只有一套实现。
+
+```csharp
+using HKW.FastMember.Abstractions;
+using ReflectionTypes = HKW.FastMember.TypeAccessor;
+using GeneratedTypes = HKW.FastMember.Generater.TypeAccessor;
+
+TypeAccessor<User> reflected = ReflectionTypes.Create<User>();
+TypeAccessor<User> generated = GeneratedTypes.Create<User>();
+using var reader = ObjectReader.Create(users, generated, "Id", "Name");
+```
 
 ## 功能特性
 
@@ -55,7 +76,7 @@ var id = (int)accessor[user, nameof(User.Id)];
 var name = (string?)accessor[user, nameof(User.Name)];
 ```
 
-成员不存在时，索引器会抛出异常。需要探测成员时可使用 Try API：
+成员不存在时，索引器会抛出异常。需要探测成员时可使用 `TryGetValue`、`TrySetValue` 方法：
 
 ```csharp
 if (accessor.TryGetValue(user, "Name", out var value))
@@ -71,7 +92,7 @@ if (!accessor.TrySetValue(user, "Missing", 42))
 
 ### 创建对象
 
-类型具有可用的无参构造函数时，可以通过访问器创建实例：
+类型具有可用的公开无参构造且满足必需成员（`required`）约束时，可以通过访问器创建实例；抽象类型或不能合法初始化的类型不支持：
 
 ```csharp
 var accessor = TypeAccessor.Create(typeof(User));
@@ -108,7 +129,7 @@ Console.WriteLine(accessor["Name"]);
 
 ### 访问非公开访问器
 
-`allowNonPublicAccessors` 允许调用公开属性的非公开 getter 或 setter，但不会额外暴露私有字段或私有属性。
+`allowNonPublicAccessors` 允许调用公开属性的非公开取值或赋值访问器，但不会额外暴露私有字段或私有属性。
 
 ```csharp
 public sealed class Entity
@@ -154,7 +175,7 @@ var members = TypeHelpers.GetMembers(
 
 ### 同步对象序列
 
-`ObjectReader` 继承自 `DbDataReader`，可以将对象序列直接加载到 `DataTable`：
+后端 `ObjectReader.Create` 返回公共层继承自 `DbDataReader` 的读取器，可以将对象序列直接加载到 `DataTable`：
 
 ```csharp
 using System.Data;
@@ -170,13 +191,15 @@ using var reader = ObjectReader.Create(users, nameof(User.Id), nameof(User.Name)
 table.Load(reader);
 ```
 
-未指定列时，将自动使用可访问成员。显式指定列时，列顺序与参数顺序一致。
+未指定列时只选择可读成员，按 `Ordinal`、再按名称序号排序。显式列保留顺序及重复列，`GetOrdinal` 区分大小写并返回首次位置；未知/不可读列在创建时失败，列数组/名称为空时抛出 `ArgumentNullException`。创建读取器和获取架构时不枚举源，空源仍有完整架构。`Nullable<T>` 的列类型为 `T`，`AllowDBNull=true`；引用类型同样允许空值，`IsKey=false`，`ColumnSize=-1`。公共注入入口要求访问器目标类型能接收源的静态元素类型，不逐行发现派生类型。
 
 ### 自定义默认列顺序
 
-使用 `OrdinalAttribute` 可以指定自动发现成员时的顺序：
+使用公共层唯一的 `OrdinalAttribute` 可以指定默认列顺序：
 
 ```csharp
+using HKW.FastMember.Abstractions;
+
 public sealed class ExportRow
 {
     [Ordinal(0)]
@@ -217,43 +240,27 @@ while (await reader.ReadAsync(cancellation.Token))
 
 - 成员名称使用区分大小写的序号比较。
 - 索引器访问未知成员时会抛出 `ArgumentOutOfRangeException`。
-- Try API 对不存在或不支持的成员返回 `false`。
-- 用户属性 getter 或 setter 抛出的异常会原样传播，不会被 Try API 吞掉。
+- `TryGetValue`、`TrySetValue` 方法对不存在或不支持的成员返回 `false`。
+- 用户属性的取值或赋值访问器抛出的异常会原样传播，不会被 `TryGetValue`、`TrySetValue` 方法吞掉。
 - `ObjectReader` 中的 `null` 会以 `DBNull.Value` 返回。
-- 动态对象无法自动枚举成员，创建 `ObjectReader` 时必须显式提供列名。
+- 动态对象没有固定成员表；访问器 `GetMembersSupported=false`，元数据 API 抛出 `NotSupportedException`。反射后端创建动态读取器必须显式提供列名，架构固定为 `object/AllowDBNull=true`；列可重复，空源仍有架构，缺失动态值时传播绑定错误而不伪造空值。DLR 索引器绑定失败抛出 `RuntimeBinderException`，`TryGetValue`、`TrySetValue` 返回 `false`，是独立于静态成员的契约。
+- `HasRows` 可以预读缓存首行，不丢行；读取前/结束后取值、行对象为 `null`、关闭后数据操作抛出 `InvalidOperationException`。到达数据末尾后重复读取返回 `false`，只有一个结果集。
+- 创建时的取消令牌传给异步枚举器；`ReadAsync(token)` 预检查该取消令牌，但不能保证取消使用另一取消令牌创建且正在运行的 `MoveNextAsync`。不会重新创建枚举器。
+- `Close/Dispose/DisposeAsync` 至多释放一次；未开始读取不取得枚举器，枚举异常保持原异常，之后不继续枚举。
+- 异步源的同步 `Read/HasRows/Close` 可能阻塞，优先用异步 API。重叠读取被拒绝；不支持读取与释放并发。
 
 ## AOT 与裁剪限制
 
-本库的内置访问器依赖运行时 IL 生成或 DLR，**不支持 Native AOT**，也没有反射后备或源生成访问器。Unity IL2CPP 等受限环境不在支持范围内，且未经过验证。
+**反射后端 HKW.FastMember** 的内置访问器依赖运行时 IL 生成或 DLR，**不支持 Native AOT**，不会自动切换为源生成后端。Unity IL2CPP 等受限环境不在支持范围内，且未经过验证。公共层和源生成工厂不继承反射后端的 RUC/RDC 限制；这不等于已经验证 NativeAOT 发布。
 
 - `TypeAccessor.Create`、`ObjectAccessor.Create` 和同步/异步 `ObjectReader.Create` 标注了 `RequiresDynamicCode` 与 `RequiresUnreferencedCode`。启用相关分析器时，调用方会看到 `IL3050`（动态代码）和 `IL2026`（裁剪）警告。
 - 当 `RuntimeFeature.IsDynamicCodeSupported` 为 `false` 时，内置工厂会在创建访问器之前抛出带明确说明的 `PlatformNotSupportedException`，包括动态对象分支。不会尝试降级或开始枚举对象序列。`TypeAccessor` / `ObjectAccessor` 的空参数仍优先抛出 `ArgumentNullException`。
-- 裁剪和 AOT 是不同限制：即使环境允许动态代码，裁剪仍可能移除按名称访问的成员、非公开访问器或后备字段。`TypeHelpers` 和访问器的元数据查询也标注裁剪限制，但纯元数据发现不因此要求动态代码。
+- 裁剪和 AOT 是不同限制：即使环境允许动态代码，裁剪仍可能移除按名称访问的成员或非公开访问器。限制保留在反射创建、`TypeHelpers` 和反射特性查询边界；公共访问器读取既有纯描述不执行反射发现，不带反射后端的整体限制。
 - 普通未裁剪的 JIT 运行方式保持不变。将诊断警告视为错误的消费者可能在构建时发现这些既有限制；不应以忽略警告代替兼容性验证。
-
-### 诊断验证项目
-
-`HKW.FastMember.AotDiagnostics` 刻意保留直接工厂调用，用于验证消费者能收到上述警告。它不是 AOT 成员访问示例：JIT 下验证正常读写，Native AOT 下验证明确拒绝且不执行用户 getter 或枚举输入。项目没有默认启用 `PublishAot`，普通解决方案构建不要求原生工具链。
-
-下面是 Windows x64 的验证命令；在其他系统上应使用对应 RID 和原生工具链。发布前需安装 [Native AOT 前置工具](https://learn.microsoft.com/dotnet/core/deploying/native-aot/#prerequisites)，Windows 需要 Visual Studio 的“使用 C++ 的桌面开发”工作负载。
-
-```powershell
-# 两个目标框架均验证；发布期间预期出现 IL3050/IL2026。
-foreach ($framework in 'net8.0', 'net10.0') {
-    dotnet run --project HKW.FastMember.AotDiagnostics -c Release -f $framework
-    if ($LASTEXITCODE -ne 0) { throw 'JIT diagnostic verification failed' }
-    dotnet publish HKW.FastMember.AotDiagnostics -c Release -f $framework -r win-x64 -p:PublishAot=true -p:TrimmerSingleWarn=false
-    if ($LASTEXITCODE -ne 0) { throw 'Native AOT publish failed' }
-    & ".\HKW.FastMember.AotDiagnostics\bin\Release\$framework\win-x64\publish\HKW.FastMember.AotDiagnostics.exe"
-    if ($LASTEXITCODE -ne 0) { throw 'Native AOT diagnostic verification failed' }
-}
-```
-
-成功时输出 `PASS`，原生程序应报告 `IsDynamicCodeSupported=False`。这只证明诊断与提前拒绝符合契约，**不代表库已支持 AOT**。
 
 ## 基准测试
 
-基准项目使用 BenchmarkDotNet，包含以下对比：
+基准项目本轮仅迁移引用，**未编译、未运行**，不以旧基准推断重构后的性能。项目使用 BenchmarkDotNet，包含以下对比：
 
 - 直接属性访问
 - `TypeAccessor`
@@ -274,19 +281,27 @@ dotnet run -c Release --project HKW.FastMember.Benchmarks -f net10.0
 
 ## 构建与测试
 
+仅测试范围的验证命令（不触发自动打包，不构建基准测试与 AOT 诊断项目）：
+
 ```powershell
-dotnet build HKW.FastMember.sln -c Release
-dotnet test HKW.FastMemberTests/HKW.FastMemberTests.csproj -c Release
+dotnet test .\HKW.FastMember.Abstractions.Tests\HKW.FastMember.Abstractions.Tests.csproj -c Release -p:GeneratePackageOnBuild=false
+dotnet test .\HKW.FastMemberTests\HKW.FastMemberTests.csproj -c Release -p:GeneratePackageOnBuild=false
+dotnet test .\HKW.FastMember.Generater.Tests\HKW.FastMember.Generater.Tests.csproj -c Release -p:GeneratePackageOnBuild=false
 ```
 
-测试同时覆盖 `net8.0` 与 `net10.0`，包括普通成员、动态对象、同步与异步读取器、错误契约、并发缓存和 ADO.NET 兼容行为。
+三个测试项目均覆盖 `net8.0` 与 `net10.0`：公共层用人工访问器独立验证契约与读取器；反射后端验证 Emit/DLR 扩展；生成后端验证生成诊断及输出编译/执行，并通过仅测试项目的双后端引用验证一致性。
 
 ## 项目结构
 
 | 项目 | 说明 |
 |---|---|
-| `HKW.FastMember` | 核心库 |
-| `HKW.FastMemberTests` | MSTest 单元测试 |
+| `HKW.FastMember.Abstractions` | 公共契约、元数据与唯一读取器实现 |
+| `HKW.FastMember.Abstractions.Tests` | 不引用后端的 MSTest 契约与读取器测试 |
+| `HKW.FastMember` | 反射发现、Emit/DLR 后端 |
+| `HKW.FastMember.Tests` | 反射后端 MSTest 回归 |
+| `HKW.FastMember.Generater` | 源生成后端与单包分析器布局 |
+| `HKW.FastMember.Generater.SourceGenerator` | Roslyn 生成器/分析器，不单独发布 |
+| `HKW.FastMember.Generater.Tests` | GeneratorDriver、生成行为及双后端一致性测试 |
 | `HKW.FastMember.Benchmarks` | BenchmarkDotNet 性能基准 |
 | `HKW.FastMember.AotDiagnostics` | JIT 正常行为与 Native AOT 提前拒绝的诊断验证 |
 

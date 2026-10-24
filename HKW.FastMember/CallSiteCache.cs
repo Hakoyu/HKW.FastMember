@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Microsoft.CSharp.RuntimeBinder;
 
 namespace HKW.FastMember;
@@ -36,7 +36,35 @@ internal static class CallSiteCache
     /// </summary>
     /// <param name="name">要获取的成员名称</param>
     /// <param name="target">目标对象实例</param>
-    /// <returns>成员的值</returns>
+    /// <param name="value">成员值，或绑定失败时的 null</param>
+    /// <returns>绑定是否成功</returns>
+    internal static bool TryGetValue(string name, object target, out object? value)
+    {
+        try
+        {
+            value = GetValue(name, target);
+            return true;
+        }
+        catch (RuntimeBinderException)
+        {
+            value = null;
+            return false;
+        }
+    }
+
+    internal static bool TrySetValue(string name, object target, object? value)
+    {
+        try
+        {
+            SetValue(name, target, value!);
+            return true;
+        }
+        catch (RuntimeBinderException)
+        {
+            return false;
+        }
+    }
+
     internal static object GetValue(string name, object target)
     {
         var callSite = _getters.GetOrAdd(
