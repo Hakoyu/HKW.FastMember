@@ -9,15 +9,29 @@
     <Version>0.1.0</Version>
     <Authors>HKW</Authors>
     <Description>Source-generated member access with an independent runtime.</Description>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\HKW.FastMember.Abstractions\HKW.FastMember.Abstractions.csproj" />
-    <ProjectReference Include="..\HKW.FastMember.Generater.SourceGenerator\HKW.FastMember.Generater.SourceGenerator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
-    <None Include="..\HKW.FastMember.Generater.SourceGenerator\bin\$(Configuration)\netstandard2.0\HKW.FastMember.Generater.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <None Include="..\HKW.FastMember.Generater.SourceGenerator\bin\$(Configuration)\netstandard2.0\HKW.SourceGeneratorUtils.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <ProjectReference
+      Include="..\HKW.FastMember.Generater.SourceGenerator\HKW.FastMember.Generater.SourceGenerator.csproj"
+      ReferenceOutputAssembly="false"
+      PrivateAssets="all"
+    />
+    <None
+      Include="..\HKW.FastMember.Generater.SourceGenerator\bin\$(Configuration)\netstandard2.0\HKW.FastMember.Generater.SourceGenerator.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false"
+    />
+    <None
+      Include="..\HKW.FastMember.Generater.SourceGenerator\bin\$(Configuration)\netstandard2.0\HKW.SourceGeneratorUtils.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false"
+    />
     <None Include="..\LICENSE.txt" Pack="true" PackagePath="/" />
     <None Update="Readme.md" Pack="true" PackagePath="/" />
   </ItemGroup>

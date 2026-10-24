@@ -16,7 +16,7 @@ namespace HKW.FastMember.Generater.SourceGenerator.Analysis;
 internal static class AccessorModelBuilder
 {
     internal static bool IsEntry(IMethodSymbol? method) =>
-        method != null
+        method is not null
         && method.Name == "Create"
         && method.IsStatic
         && method.Arity == 1
@@ -49,7 +49,7 @@ internal static class AccessorModelBuilder
             return true;
         for (
             var symbol = semantic.GetEnclosingSymbol(node.SpanStart, token);
-            symbol != null;
+            symbol is not null;
             symbol = symbol.ContainingSymbol
         )
             if (
@@ -114,8 +114,8 @@ internal static class AccessorModelBuilder
         var errors = ImmutableArray.CreateBuilder<Diagnostic>();
         var location = node.GetLocation();
         if (
-            !(type is INamedTypeSymbol named)
-            || named.TypeKind != TypeKind.Class
+            type is not INamedTypeSymbol named
+            || named.TypeKind is not TypeKind.Class
             || named.SpecialType == SpecialType.System_Object
             || named.IsAnonymousType
             || named.IsStatic
@@ -133,14 +133,14 @@ internal static class AccessorModelBuilder
             );
             return new AnalysisResult(null, errors.ToImmutable());
         }
-        if (!IsNameable(named, compilation))
+        if (IsNameable(named, compilation) is false)
         {
             errors.Add(
                 Diagnostic.Create(Diagnostics.InaccessibleType, location, type.ToDisplayString())
             );
             return new AnalysisResult(null, errors.ToImmutable());
         }
-        if (!BindsUniquely(named, compilation))
+        if (BindsUniquely(named, compilation) is false)
         {
             errors.Add(
                 Diagnostic.Create(Diagnostics.AmbiguousType, location, type.ToDisplayString())
@@ -148,7 +148,7 @@ internal static class AccessorModelBuilder
             return new AnalysisResult(null, errors.ToImmutable());
         }
         var members = new Dictionary<string, MemberModel>(StringComparer.Ordinal);
-        for (var current = named; current != null; current = current.BaseType)
+        for (var current = named; current is not null; current = current.BaseType)
         {
             token.ThrowIfCancellationRequested();
             var eligible = current
@@ -185,25 +185,32 @@ internal static class AccessorModelBuilder
                     continue;
                 }
                 var read =
-                    field != null
+                    field is not null
                     || property!.GetMethod?.DeclaredAccessibility == Accessibility.Public;
-                var write =
-                    field != null
-                        ? !field.IsReadOnly
-                        : property!.SetMethod?.DeclaredAccessibility == Accessibility.Public
-                            && !property.SetMethod.IsInitOnly;
+                var write = field is not null
+                    ? field.IsReadOnly is false
+                    : property!.SetMethod?.DeclaredAccessibility == Accessibility.Public
+                        && property.SetMethod.IsInitOnly is false;
                 if (
-                    !IsNameable(memberType, compilation)
-                    || !IsNameable(current, compilation)
-                    || !BindsUniquely(memberType, compilation)
-                    || !BindsUniquely(current, compilation)
+                    IsNameable(memberType, compilation) is false
+                    || IsNameable(current, compilation) is false
+                    || BindsUniquely(memberType, compilation) is false
+                    || BindsUniquely(current, compilation) is false
                     || (
-                        !SyntaxFacts.IsValidIdentifier(member.Name)
+                        SyntaxFacts.IsValidIdentifier(member.Name) is false
                         && SyntaxFacts.GetKeywordKind(member.Name) == SyntaxKind.None
                     )
                     || IsObsoleteError(member)
-                    || (read && property?.GetMethod != null && IsObsoleteError(property.GetMethod))
-                    || (write && property?.SetMethod != null && IsObsoleteError(property.SetMethod))
+                    || (
+                        read
+                        && property?.GetMethod is not null
+                        && IsObsoleteError(property.GetMethod)
+                    )
+                    || (
+                        write
+                        && property?.SetMethod is not null
+                        && IsObsoleteError(property.SetMethod)
+                    )
                 )
                 {
                     errors.Add(
@@ -226,7 +233,7 @@ internal static class AccessorModelBuilder
                             == "HKW.FastMember.Abstractions"
                     );
                 if (
-                    attribute != null
+                    attribute is not null
                     && attribute.ConstructorArguments.Length == 1
                     && attribute.ConstructorArguments[0].Value is int value
                 )
@@ -285,10 +292,14 @@ internal static class AccessorModelBuilder
 
     private static bool IsEligible(ISymbol symbol) =>
         symbol.DeclaredAccessibility == Accessibility.Public
-        && !symbol.IsStatic
+        && symbol.IsStatic is false
         && (
-            (symbol is IPropertySymbol property && !property.IsIndexer)
-            || (symbol is IFieldSymbol field && !field.IsConst && !field.IsImplicitlyDeclared)
+            (symbol is IPropertySymbol property && property.IsIndexer is false)
+            || (
+                symbol is IFieldSymbol field
+                && field.IsConst is false
+                && field.IsImplicitlyDeclared is false
+            )
         );
 
     private static bool Unboxable(ITypeSymbol type) =>
@@ -320,7 +331,7 @@ internal static class AccessorModelBuilder
         if (type is IArrayTypeSymbol array)
             return IsNameable(array.ElementType, compilation);
         if (
-            !(type is INamedTypeSymbol named)
+            type is not INamedTypeSymbol named
             || named.IsAnonymousType
             || named.IsFileLocal
             || ContainsTypeParameter(named)
@@ -337,26 +348,26 @@ internal static class AccessorModelBuilder
             return true;
         if (type is IArrayTypeSymbol array)
             return BindsUniquely(array.ElementType, compilation);
-        if (!(type is INamedTypeSymbol named))
+        if (type is not INamedTypeSymbol named)
             return false;
         if (named.IsTupleType)
             named = named.TupleUnderlyingType!;
         var original = named.OriginalDefinition;
         var reference = compilation.GetMetadataReference(original.ContainingAssembly);
         if (
-            reference != null
+            reference is not null
             && reference.Properties.Aliases.Length != 0
-            && !reference.Properties.Aliases.Contains("global")
+            && reference.Properties.Aliases.Contains("global") is false
         )
             return false;
         var metadata = original.MetadataName;
         for (
             var containing = original.ContainingType;
-            containing != null;
+            containing is not null;
             containing = containing.ContainingType
         )
             metadata = containing.MetadataName + "+" + metadata;
-        if (!original.ContainingNamespace.IsGlobalNamespace)
+        if (original.ContainingNamespace.IsGlobalNamespace is false)
             metadata = original.ContainingNamespace.ToDisplayString() + "." + metadata;
         return SymbolEqualityComparer.Default.Equals(
                 compilation.GetTypeByMetadataName(metadata),
@@ -382,7 +393,7 @@ internal static class AccessorModelBuilder
         var ctor = type.InstanceConstructors.FirstOrDefault(c =>
             c.Parameters.Length == 0
             && c.DeclaredAccessibility == Accessibility.Public
-            && !IsObsoleteError(c)
+            && IsObsoleteError(c) is false
         );
         if (ctor == null)
             return false;
@@ -394,7 +405,7 @@ internal static class AccessorModelBuilder
                 )
         )
             return true;
-        for (var current = type; current != null; current = current.BaseType)
+        for (var current = type; current is not null; current = current.BaseType)
             if (
                 current
                     .GetMembers()

@@ -6,17 +6,27 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MSTest" Version="4.5.1" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
-    <PackageReference Include="HKW.SourceGeneratorUtils" Version="0.2.3" PrivateAssets="all" GeneratePathProperty="true" />
+    <PackageReference
+      Include="HKW.SourceGeneratorUtils"
+      Version="0.2.3"
+      PrivateAssets="all"
+      GeneratePathProperty="true"
+    />
     <Analyzer Include="$(PkgHKW_SourceGeneratorUtils)\lib\netstandard2.0\HKW.SourceGeneratorUtils.dll" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HKW.FastMember.Generater\HKW.FastMember.Generater.csproj" />
     <!-- 同一个引用同时为生成器驱动程序提供程序集引用，并为编译器提供分析器。 -->
-    <ProjectReference Include="..\HKW.FastMember.Generater.SourceGenerator\HKW.FastMember.Generater.SourceGenerator.csproj" ReferenceOutputAssembly="true" OutputItemType="Analyzer" />
+    <ProjectReference
+      Include="..\HKW.FastMember.Generater.SourceGenerator\HKW.FastMember.Generater.SourceGenerator.csproj"
+      ReferenceOutputAssembly="true"
+      OutputItemType="Analyzer"
+    />
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
   </ItemGroup>
   <ItemGroup>
