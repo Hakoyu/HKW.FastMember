@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,6 +20,8 @@ public abstract partial class ObjectReader : DbDataReader
     {
         private IAsyncEnumerator<T>? _source;
 
+        [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+        [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
         internal AsyncObjectReader(
             Type type,
             IAsyncEnumerable<T> source,
@@ -105,6 +108,9 @@ public abstract partial class ObjectReader : DbDataReader
     /// <param name="source">要表示的对象序列</param>
     /// <param name="members">应该暴露给读取器的成员</param>
     /// <returns>对象读取器</returns>
+    /// <exception cref="PlatformNotSupportedException">Runtime dynamic code generation is unavailable.</exception>
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static ObjectReader Create<T>(IAsyncEnumerable<T> source, params string[] members) =>
         new AsyncObjectReader<T>(typeof(T), source, members, CancellationToken.None);
 
@@ -115,6 +121,9 @@ public abstract partial class ObjectReader : DbDataReader
     /// <param name="cancellationToken">取消令牌</param>
     /// <param name="members">应该暴露给读取器的成员</param>
     /// <returns>对象读取器</returns>
+    /// <exception cref="PlatformNotSupportedException">Runtime dynamic code generation is unavailable.</exception>
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static ObjectReader Create<T>(
         IAsyncEnumerable<T> source,
         CancellationToken cancellationToken,

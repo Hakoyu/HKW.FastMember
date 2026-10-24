@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,6 +37,9 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     /// </summary>
     /// <param name="source">要表示的对象序列</param>
     /// <param name="members">应该暴露给读取器的成员</param>
+    /// <exception cref="PlatformNotSupportedException">Runtime dynamic code generation is unavailable.</exception>
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static ObjectReader Create<T>(IEnumerable<T> source, params string[] members) =>
         new SyncObjectReader(typeof(T), source, members);
 
@@ -44,6 +48,8 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     /// </summary>
     /// <param name="type">要读取的信息的预期类型</param>
     /// <param name="members">应该暴露给读取器的成员</param>
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     protected ObjectReader(Type type, params string[] members)
     {
         var isEmptyMembers = members is null || members.Length == 0;
@@ -141,6 +147,11 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
 #endif
 
     /// <inheritdoc />
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2111",
+        Justification = "The schema table stores Type values; it does not invoke reflected Type members or serialize them."
+    )]
     public override DataTable GetSchemaTable()
     {
         // 这些是DataTable加载使用的列
@@ -311,6 +322,14 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     }
 
     /// <inheritdoc/>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2063",
+        Justification = "Matches the DbDataReader return contract. All reader constructors require unreferenced code; callers must preserve reflected metadata when trimming."
+    )]
+    [return: DynamicallyAccessedMembers(
+        DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.PublicProperties
+    )]
     public override Type GetFieldType(int ordinal)
     {
         return _effectiveTypes == null ? typeof(object) : _effectiveTypes[ordinal];
@@ -410,6 +429,8 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
     {
         private IEnumerator? _source;
 
+        [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+        [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
         internal SyncObjectReader(Type type, IEnumerable source, string[] members)
             : base(type, members)
         {

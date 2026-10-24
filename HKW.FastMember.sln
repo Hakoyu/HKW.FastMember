@@ -1,4 +1,3 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34330.188
@@ -13,6 +12,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMemberTests", "HKW.FastMemberTests\HKW.FastMemberTests.csproj", "{DD68AEB4-B46D-4981-BAD3-6EA4E76B67C8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.Benchmarks", "HKW.FastMember.Benchmarks\HKW.FastMember.Benchmarks.csproj", "{ADFB7F87-D98B-4DC9-9A68-A67F7DFFB7B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HKW.FastMember.AotDiagnostics", "HKW.FastMember.AotDiagnostics\HKW.FastMember.AotDiagnostics.csproj", "{8A6D9677-BFF9-4498-B14A-0461BCC2991C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,6 +33,10 @@ Global
 		{ADFB7F87-D98B-4DC9-9A68-A67F7DFFB7B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ADFB7F87-D98B-4DC9-9A68-A67F7DFFB7B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ADFB7F87-D98B-4DC9-9A68-A67F7DFFB7B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A6D9677-BFF9-4498-B14A-0461BCC2991C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A6D9677-BFF9-4498-B14A-0461BCC2991C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A6D9677-BFF9-4498-B14A-0461BCC2991C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A6D9677-BFF9-4498-B14A-0461BCC2991C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

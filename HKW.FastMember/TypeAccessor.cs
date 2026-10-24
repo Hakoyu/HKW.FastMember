@@ -2,6 +2,7 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Dynamic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -46,6 +47,7 @@ public abstract class TypeAccessor
     /// 获取此类型可用的成员
     /// </summary>
     /// <returns>可用成员</returns>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public virtual ImmutableArray<Member> GetMembers()
     {
         throw new NotSupportedException();
@@ -55,6 +57,7 @@ public abstract class TypeAccessor
     /// 获取此类型可用的成员字典
     /// </summary>
     /// <returns>成员字典</returns>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public virtual ImmutableDictionary<string, Member> GetMemberDictionary()
     {
         throw new NotSupportedException();
@@ -64,6 +67,8 @@ public abstract class TypeAccessor
     /// 提供类型特定的访问器，允许按名称访问该类型的所有对象
     /// </summary>
     /// <remarks>访问器在内部缓存；可能返回预先存在的访问器</remarks>
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static TypeAccessor Create(Type type)
     {
         return Create(type, false);
@@ -73,9 +78,13 @@ public abstract class TypeAccessor
     /// 提供类型特定的访问器，允许按名称访问该类型的所有对象
     /// </summary>
     /// <remarks>访问器在内部缓存；可能返回预先存在的访问器</remarks>
+    /// <exception cref="PlatformNotSupportedException">Runtime dynamic code generation is unavailable.</exception>
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static TypeAccessor Create(Type type, bool allowNonPublicAccessors)
     {
         ArgumentNullException.ThrowIfNull(type);
+        DeploymentRequirements.EnsureDynamicCodeSupported();
 
         var accessors = allowNonPublicAccessors ? _nonPublicAccessors : _publicAccessors;
         return accessors
@@ -124,6 +133,7 @@ public abstract class TypeAccessor
         il.Emit(OpCodes.Br, failure);
     }
 
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     private static void WriteMapImpl(
         ILGenerator il,
         Type type,
@@ -327,6 +337,7 @@ public abstract class TypeAccessor
         /// <summary>
         /// 获取此类型可用的成员
         /// </summary>
+        [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
         public override ImmutableArray<Member> GetMembers()
         {
             return _members ??= TypeHelpers.GetMembers(Type);
@@ -338,6 +349,7 @@ public abstract class TypeAccessor
         /// 获取此类型可用的成员字典
         /// </summary>
         /// <returns>成员字典</returns>
+        [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
         public override ImmutableDictionary<string, Member> GetMemberDictionary()
         {
             _members ??= TypeHelpers.GetMembers(Type);
@@ -449,6 +461,8 @@ public abstract class TypeAccessor
         return true;
     }
 
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     private static TypeAccessor CreateNew(Type type, bool allowNonPublicAccessors)
     {
         if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(type))
@@ -671,6 +685,7 @@ public abstract class TypeAccessor
         }
     }
 
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     private static void WriteTryMapImpl(
         ILGenerator il,
         Type type,
@@ -903,6 +918,8 @@ public abstract class TypeAccessor
     public abstract bool TrySetValue(object target, string name, object value);
 }
 
+[RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+[RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
 internal sealed class DynamicAccessor : TypeAccessor
 {
     public static DynamicAccessor Singleton { get; } = new();

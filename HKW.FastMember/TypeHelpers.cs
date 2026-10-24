@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HKW.FastMember;
 
@@ -16,6 +17,7 @@ public static class TypeHelpers
     /// <param name="type">类型</param>
     /// <param name="flags">标志</param>
     /// <returns>所有属性成员</returns>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static PropertyInfo[] GetTypeAndInterfaceProperties(this Type type, BindingFlags flags)
     {
         return !type.IsInterface
@@ -29,6 +31,7 @@ public static class TypeHelpers
     /// <param name="type">类型</param>
     /// <param name="bindingFlags">标志</param>
     /// <returns>所有目标成员</returns>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static ImmutableArray<Member> GetMembers(
         Type type,
         BindingFlags bindingFlags = PublicInstance
@@ -52,6 +55,7 @@ public static class TypeHelpers
     /// <typeparam name="T">类型</typeparam>
     /// <param name="bindingFlags">标志</param>
     /// <returns>所有目标成员</returns>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static IEnumerable<Member> GetMembers<T>(BindingFlags bindingFlags = PublicInstance)
     {
         return GetMembers(typeof(T), bindingFlags);
@@ -63,6 +67,7 @@ public static class TypeHelpers
     /// <param name="type">类型</param>
     /// <param name="bindingFlags">标志</param>
     /// <returns>所有目标成员字典</returns>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static ImmutableDictionary<string, Member> GetMembersDictionary(
         this Type type,
         BindingFlags bindingFlags = PublicInstance
@@ -84,6 +89,7 @@ public static class TypeHelpers
     /// <typeparam name="T">类型</typeparam>
     /// <param name="bindingFlags">标志</param>
     /// <returns>所有目标成员字典</returns>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static ImmutableDictionary<string, Member> GetMembersDictionary<T>(
         BindingFlags bindingFlags = PublicInstance
     )

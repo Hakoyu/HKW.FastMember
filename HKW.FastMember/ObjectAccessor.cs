@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Dynamic;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.CSharp.RuntimeBinder;
 
 namespace HKW.FastMember;
@@ -31,6 +32,8 @@ public abstract class ObjectAccessor
     /// </summary>
     /// <param name="source">对象</param>
     /// <returns>访问器</returns>
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static ObjectAccessor Create(object source)
     {
         return Create(source, false);
@@ -40,9 +43,13 @@ public abstract class ObjectAccessor
     /// 包装单个对象，允许通过名称访问该实例
     /// </summary>
     /// <exception cref="ArgumentNullException">目标为空</exception>
+    /// <exception cref="PlatformNotSupportedException">Runtime dynamic code generation is unavailable.</exception>
+    [RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static ObjectAccessor Create(object source, bool allowNonPublicAccessors)
     {
         ArgumentNullException.ThrowIfNull(source);
+        DeploymentRequirements.EnsureDynamicCodeSupported();
         if (source is IDynamicMetaObjectProvider dlr)
             return new DynamicWrapper(dlr); // 使用DLR
         return new TypeAccessorWrapper(
@@ -74,6 +81,7 @@ public abstract class ObjectAccessor
     /// 获取此类型可用的成员
     /// </summary>
     /// <returns>可用成员</returns>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public virtual ImmutableArray<Member> GetMembers()
     {
         throw new NotSupportedException();
@@ -83,6 +91,7 @@ public abstract class ObjectAccessor
     /// 获取此类型可用的成员字典
     /// </summary>
     /// <returns>成员字典</returns>
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public virtual ImmutableDictionary<string, Member> GetMemberDictionary()
     {
         throw new NotSupportedException();
@@ -139,17 +148,21 @@ internal sealed class TypeAccessorWrapper : ObjectAccessor
         return Accessor.TrySetValue(Source, name, value);
     }
 
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public override ImmutableArray<Member> GetMembers()
     {
         return Accessor.GetMembers();
     }
 
+    [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public override ImmutableDictionary<string, Member> GetMemberDictionary()
     {
         return Accessor.GetMemberDictionary();
     }
 }
 
+[RequiresDynamicCode(DeploymentRequirements.DynamicCode)]
+[RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
 internal sealed class DynamicWrapper : ObjectAccessor
 {
     public DynamicWrapper(IDynamicMetaObjectProvider source)

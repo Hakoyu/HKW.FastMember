@@ -222,9 +222,34 @@ while (await reader.ReadAsync(cancellation.Token))
 - `ObjectReader` 中的 `null` 会以 `DBNull.Value` 返回。
 - 动态对象无法自动枚举成员，创建 `ObjectReader` 时必须显式提供列名。
 
-## AOT 限制
+## AOT 与裁剪限制
 
-本库会在运行时生成 IL，因此不适用于禁止动态代码生成的受限 AOT 环境，例如 Unity IL2CPP。Native AOT 场景也应在采用前进行兼容性验证。
+本库的内置访问器依赖运行时 IL 生成或 DLR，**不支持 Native AOT**，也没有反射后备或源生成访问器。Unity IL2CPP 等受限环境不在支持范围内，且未经过验证。
+
+- `TypeAccessor.Create`、`ObjectAccessor.Create` 和同步/异步 `ObjectReader.Create` 标注了 `RequiresDynamicCode` 与 `RequiresUnreferencedCode`。启用相关分析器时，调用方会看到 `IL3050`（动态代码）和 `IL2026`（裁剪）警告。
+- 当 `RuntimeFeature.IsDynamicCodeSupported` 为 `false` 时，内置工厂会在创建访问器之前抛出带明确说明的 `PlatformNotSupportedException`，包括动态对象分支。不会尝试降级或开始枚举对象序列。`TypeAccessor` / `ObjectAccessor` 的空参数仍优先抛出 `ArgumentNullException`。
+- 裁剪和 AOT 是不同限制：即使环境允许动态代码，裁剪仍可能移除按名称访问的成员、非公开访问器或后备字段。`TypeHelpers` 和访问器的元数据查询也标注裁剪限制，但纯元数据发现不因此要求动态代码。
+- 普通未裁剪的 JIT 运行方式保持不变。将诊断警告视为错误的消费者可能在构建时发现这些既有限制；不应以忽略警告代替兼容性验证。
+
+### 诊断验证项目
+
+`HKW.FastMember.AotDiagnostics` 刻意保留直接工厂调用，用于验证消费者能收到上述警告。它不是 AOT 成员访问示例：JIT 下验证正常读写，Native AOT 下验证明确拒绝且不执行用户 getter 或枚举输入。项目没有默认启用 `PublishAot`，普通解决方案构建不要求原生工具链。
+
+下面是 Windows x64 的验证命令；在其他系统上应使用对应 RID 和原生工具链。发布前需安装 [Native AOT 前置工具](https://learn.microsoft.com/dotnet/core/deploying/native-aot/#prerequisites)，Windows 需要 Visual Studio 的“使用 C++ 的桌面开发”工作负载。
+
+```powershell
+# 两个目标框架均验证；发布期间预期出现 IL3050/IL2026。
+foreach ($framework in 'net8.0', 'net10.0') {
+    dotnet run --project HKW.FastMember.AotDiagnostics -c Release -f $framework
+    if ($LASTEXITCODE -ne 0) { throw 'JIT diagnostic verification failed' }
+    dotnet publish HKW.FastMember.AotDiagnostics -c Release -f $framework -r win-x64 -p:PublishAot=true -p:TrimmerSingleWarn=false
+    if ($LASTEXITCODE -ne 0) { throw 'Native AOT publish failed' }
+    & ".\HKW.FastMember.AotDiagnostics\bin\Release\$framework\win-x64\publish\HKW.FastMember.AotDiagnostics.exe"
+    if ($LASTEXITCODE -ne 0) { throw 'Native AOT diagnostic verification failed' }
+}
+```
+
+成功时输出 `PASS`，原生程序应报告 `IsDynamicCodeSupported=False`。这只证明诊断与提前拒绝符合契约，**不代表库已支持 AOT**。
 
 ## 基准测试
 
@@ -263,4 +288,5 @@ dotnet test HKW.FastMemberTests/HKW.FastMemberTests.csproj -c Release
 | `HKW.FastMember` | 核心库 |
 | `HKW.FastMemberTests` | MSTest 单元测试 |
 | `HKW.FastMember.Benchmarks` | BenchmarkDotNet 性能基准 |
+| `HKW.FastMember.AotDiagnostics` | JIT 正常行为与 Native AOT 提前拒绝的诊断验证 |
 

@@ -2,3 +2,7 @@
 
 # Default severity for all analyzer diagnostics
 dotnet_analyzer_diagnostic.severity = none
+
+# Keep deployment diagnostics visible even when general style analysis is disabled.
+dotnet_analyzer_diagnostic.category-Trimming.severity = warning
+dotnet_analyzer_diagnostic.category-AOT.severity = warning
