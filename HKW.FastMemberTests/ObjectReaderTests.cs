@@ -118,6 +118,7 @@ public sealed class ObjectReaderTests
         Assert.AreEqual(typeof(int), columns[1].DataType);
         Assert.AreEqual(-1, columns[1].ColumnSize);
         Assert.AreEqual(true, columns[1].AllowDBNull);
+        Assert.AreEqual(false, columns[1].IsKey);
         Assert.AreSame(columns, ((IDbColumnSchemaGenerator)reader).GetColumnSchema());
     }
 
@@ -447,6 +448,7 @@ public sealed class ObjectReaderTests
         Assert.AreEqual(type, row["DataType"]);
         Assert.AreEqual(-1, row["ColumnSize"]);
         Assert.AreEqual(allowNull, row["AllowDBNull"]);
+        Assert.AreEqual(false, row["IsKey"]);
     }
 
     private sealed class EmptyModel { }

@@ -8,7 +8,10 @@ namespace HKW.FastMember.Benchmarks;
 public class AccessorCreationBenchmarks
 {
     private static readonly ModuleBuilder Module = AssemblyBuilder
-        .DefineDynamicAssembly(new AssemblyName("AccessorCreationBenchmarks"), AssemblyBuilderAccess.Run)
+        .DefineDynamicAssembly(
+            new AssemblyName("AccessorCreationBenchmarks"),
+            AssemblyBuilderAccess.Run
+        )
         .DefineDynamicModule("Types");
 
     private Type _uncachedType = null!;
@@ -25,7 +28,7 @@ public class AccessorCreationBenchmarks
     [Benchmark]
     public TypeAccessor FirstIlAccessorCreation() => TypeAccessor.Create(_uncachedType);
 
-    [Benchmark]
-    public TypeAccessor FirstExpressionAccessorCreation() =>
-        ExpressionTypeAccessor.Create(_uncachedType);
+    //[Benchmark]
+    //public TypeAccessor FirstExpressionAccessorCreation() =>
+    //    ExpressionTypeAccessor.Create(_uncachedType);
 }

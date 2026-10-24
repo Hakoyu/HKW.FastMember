@@ -10,8 +10,10 @@ public abstract class PropertyAccessBenchmarks
     protected const string MemberName = nameof(BenchmarkModel.Value);
     protected readonly BenchmarkModel Model = new() { Value = 42 };
     protected readonly TypeAccessor Accessor = TypeAccessor.Create(typeof(BenchmarkModel));
-    protected readonly TypeAccessor ExpressionAccessor =
-        ExpressionTypeAccessor.Create(typeof(BenchmarkModel));
+
+    //protected readonly TypeAccessor ExpressionAccessor = ExpressionTypeAccessor.Create(
+    //    typeof(BenchmarkModel)
+    //);
     protected readonly PropertyInfo Property = typeof(BenchmarkModel).GetProperty(MemberName)!;
     protected ObjectAccessor ObjectAccessor = null!;
 
@@ -20,26 +22,26 @@ public abstract class PropertyAccessBenchmarks
     {
         ObjectAccessor = ObjectAccessor.Create(Model);
 
-        if (
-            (int)ExpressionAccessor[Model, MemberName] != Model.Value
-            || !ExpressionAccessor.TryGetValue(Model, MemberName, out var value)
-            || (int)value != Model.Value
-            || ExpressionAccessor.TryGetValue(Model, "Missing", out _)
-        )
-        {
-            throw new InvalidOperationException("Expression accessor getter validation failed.");
-        }
+        //if (
+        //    (int)ExpressionAccessor[Model, MemberName] != Model.Value
+        //    || !ExpressionAccessor.TryGetValue(Model, MemberName, out var value)
+        //    || (int)value != Model.Value
+        //    || ExpressionAccessor.TryGetValue(Model, "Missing", out _)
+        //)
+        //{
+        //    throw new InvalidOperationException("Expression accessor getter validation failed.");
+        //}
 
-        ExpressionAccessor[Model, MemberName] = 43;
-        if (
-            Model.Value != 43
-            || !ExpressionAccessor.TrySetValue(Model, MemberName, 42)
-            || Model.Value != 42
-            || ExpressionAccessor.TrySetValue(Model, "Missing", 0)
-        )
-        {
-            throw new InvalidOperationException("Expression accessor setter validation failed.");
-        }
+        //ExpressionAccessor[Model, MemberName] = 43;
+        //if (
+        //    Model.Value != 43
+        //    || !ExpressionAccessor.TrySetValue(Model, MemberName, 42)
+        //    || Model.Value != 42
+        //    || ExpressionAccessor.TrySetValue(Model, "Missing", 0)
+        //)
+        //{
+        //    throw new InvalidOperationException("Expression accessor setter validation failed.");
+        //}
     }
 
     protected static Func<BenchmarkModel, int> CreateGetter()
@@ -78,8 +80,8 @@ public class PropertyReadBenchmarks : PropertyAccessBenchmarks
     [Benchmark]
     public int ObjectAccessorRead() => (int)ObjectAccessor[MemberName];
 
-    [Benchmark]
-    public int ExpressionTypeAccessorRead() => (int)ExpressionAccessor[Model, MemberName];
+    //[Benchmark]
+    //public int ExpressionTypeAccessorRead() => (int)ExpressionAccessor[Model, MemberName];
 
     [Benchmark]
     public int ReflectionRead() => (int)Property.GetValue(Model)!;
@@ -102,8 +104,8 @@ public class PropertyWriteBenchmarks : PropertyAccessBenchmarks
     [Benchmark]
     public void ObjectAccessorWrite() => ObjectAccessor[MemberName] = 43;
 
-    [Benchmark]
-    public void ExpressionTypeAccessorWrite() => ExpressionAccessor[Model, MemberName] = 43;
+    //[Benchmark]
+    //public void ExpressionTypeAccessorWrite() => ExpressionAccessor[Model, MemberName] = 43;
 
     [Benchmark]
     public void ReflectionWrite() => Property.SetValue(Model, 43);

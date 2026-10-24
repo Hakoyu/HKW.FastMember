@@ -132,6 +132,7 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
             DataType = type;
             ColumnSize = -1;
             AllowDBNull = allowNull;
+            IsKey = false;
         }
     }
 
@@ -152,9 +153,10 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
                 { "DataType", typeof(Type) },
                 { "ColumnSize", typeof(int) },
                 { "AllowDBNull", typeof(bool) },
+                { "IsKey", typeof(bool) },
             },
         };
-        var rowData = new object[5];
+        var rowData = new object[6];
         for (var i = 0; i < _memberNames.Length; i++)
         {
             rowData[0] = i;
@@ -162,6 +164,7 @@ public abstract partial class ObjectReader : DbDataReader, IDbColumnSchemaGenera
             rowData[2] = _effectiveTypes == null ? typeof(object) : _effectiveTypes[i];
             rowData[3] = -1;
             rowData[4] = _allowNull == null || _allowNull[i];
+            rowData[5] = false;
             table.Rows.Add(rowData);
         }
         return table;
