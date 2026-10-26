@@ -1,3 +1,6 @@
+using System.Collections.Frozen;
+using System.Collections.Immutable;
+
 namespace HKW.FastMember.Abstractions;
 
 /// <summary>
@@ -33,9 +36,9 @@ public class ObjectAccessor
     public bool TrySetValue(string name, object? value) =>
         _accessor.TrySetValue(Source, name, value);
 
-    public IReadOnlyList<Member> GetMembers() => _accessor.GetMembers();
+    public ImmutableArray<Member> GetMembers() => _accessor.GetMembers();
 
-    public IReadOnlyDictionary<string, Member> GetMemberDictionary() =>
+    public FrozenDictionary<string, Member> GetMemberDictionary() =>
         _accessor.GetMemberDictionary();
 
     public override bool Equals(object? obj) => Source.Equals(obj);

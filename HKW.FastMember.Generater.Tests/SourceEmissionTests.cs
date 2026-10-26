@@ -128,7 +128,7 @@ public sealed class SourceEmissionTests
                     foreach (var assembly in typeof(Entry).Assembly.GetReferencedAssemblies())
                         if (assembly.Name == "HKW.SourceGeneratorUtils")
                             throw new System.InvalidOperationException("Generator utility leaked into consumer runtime");
-                    return accessor.GetMembers().Count;
+                    return accessor.GetMembers().Length;
                 }
             }
             """.Replace("MEMBER", member)

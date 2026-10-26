@@ -46,7 +46,7 @@ public sealed class GeneratorTests
             public static class Entry {
                 public static object Test() {
                     var value = EXPRESSION;
-                    return GeneratedAccessorRegistry<Model>.GetAccessor().GetMembers().Count;
+                    return GeneratedAccessorRegistry<Model>.GetAccessor().GetMembers().Length;
                 }
                 private static async System.Collections.Generic.IAsyncEnumerable<Model> Items() {
                     await System.Threading.Tasks.Task.CompletedTask;

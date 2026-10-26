@@ -67,7 +67,7 @@ public sealed class AccessorTests
             Assert.ThrowsExactly<NotSupportedException>(() => list.Clear());
         if (dictionary is IDictionary<string, Member> mutable)
             Assert.ThrowsExactly<NotSupportedException>(() => mutable.Clear());
-        Assert.AreEqual(names.Length, accessor.GetMembers().Count);
+        Assert.AreEqual(names.Length, accessor.GetMembers().Length);
     }
 
     [TestMethod]

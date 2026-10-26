@@ -61,7 +61,7 @@ public abstract class TypeAccessor
     /// <summary>
     /// 返回不可变的静态元数据, 若此访问器没有固定成员表, 则抛出异常
     /// </summary>
-    public IReadOnlyList<Member> GetMembers() =>
+    public ImmutableArray<Member> GetMembers() =>
         GetMembersSupported
             ? _members
             : throw new NotSupportedException(
@@ -71,7 +71,7 @@ public abstract class TypeAccessor
     /// <summary>
     /// 返回以成员名称为键的不可变元数据, 使用区分大小写的序号比较
     /// </summary>
-    public IReadOnlyDictionary<string, Member> GetMemberDictionary() =>
+    public FrozenDictionary<string, Member> GetMemberDictionary() =>
         GetMembersSupported
             ? _memberDictionary
             : throw new NotSupportedException(

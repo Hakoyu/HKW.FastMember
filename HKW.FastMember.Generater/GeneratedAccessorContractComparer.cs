@@ -16,9 +16,9 @@ internal static class GeneratedAccessorContractComparer
             return false;
         var firstMembers = first.GetMembers();
         var secondMembers = second.GetMembers();
-        if (firstMembers.Count != secondMembers.Count)
+        if (firstMembers.Length != secondMembers.Length)
             return false;
-        for (var index = 0; index < firstMembers.Count; index++)
+        for (var index = 0; index < firstMembers.Length; index++)
         {
             var left = firstMembers[index];
             var right = secondMembers[index];

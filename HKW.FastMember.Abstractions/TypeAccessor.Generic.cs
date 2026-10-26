@@ -24,17 +24,18 @@ public abstract class TypeAccessor<T> : TypeAccessor
     )
         : base(typeof(T), members, createNewSupported, contractVersion, getMembersSupported) { }
 
+    // 经基类引用调用以保留虚分派, 仅基于名称的后端依赖覆盖对象入口
     public object? this[T target, string name]
     {
-        get => base[target, name];
-        set => base[target, name] = value;
+        get => ((TypeAccessor)this)[target, name];
+        set => ((TypeAccessor)this)[target, name] = value;
     }
 
     public bool TryGetValue(T target, string name, out object? value) =>
-        base.TryGetValue(target, name, out value);
+        ((TypeAccessor)this).TryGetValue(target, name, out value);
 
     public bool TrySetValue(T target, string name, object? value) =>
-        base.TrySetValue(target, name, value);
+        ((TypeAccessor)this).TrySetValue(target, name, value);
 
     public new T CreateNew() => (T)base.CreateNew();
 
