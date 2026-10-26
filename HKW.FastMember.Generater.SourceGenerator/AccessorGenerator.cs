@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using HKW.FastMember.Generater.SourceGenerator.Analysis;
+using HKW.SourceGeneratorUtils;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -13,6 +14,7 @@ public sealed class AccessorGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        GeneratorHelper.Initialize();
         var results = context
             .SyntaxProvider.CreateSyntaxProvider(
                 (node, _) => node is InvocationExpressionSyntax,

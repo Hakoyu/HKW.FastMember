@@ -7,6 +7,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <StartupObject>HKW.FastMember.Generater.Tests.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MSTest" Version="4.5.1" />
@@ -19,6 +20,11 @@
     />
     <Analyzer Include="$(PkgHKW_SourceGeneratorUtils)\lib\netstandard2.0\HKW.SourceGeneratorUtils.dll" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\HKW.FastMember.Generater\HKW.FastMember.Generater.csproj" />
     <!-- 同一个引用同时为生成器驱动程序提供程序集引用，并为编译器提供分析器。 -->
@@ -27,7 +33,6 @@
       ReferenceOutputAssembly="true"
       OutputItemType="Analyzer"
     />
-    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HKW.FastMember\HKW.FastMember.csproj" />

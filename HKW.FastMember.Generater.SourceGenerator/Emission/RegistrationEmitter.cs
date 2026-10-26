@@ -16,10 +16,7 @@ internal static class RegistrationEmitter
         {
             Accessibility = Accessibility.Internal,
             AddDefaultAttributes = false,
-            Attributes = new List<AttributeGenerateInfo>
-            {
-                new(AccessorEmitter.GeneratedCodeAttribute),
-            },
+            Attributes = [GeneratorHelper.GeneratedCodeAttribute],
         };
         registration.Members.Add(
             new MethodGenerateInfo(

@@ -61,7 +61,7 @@ public static class TypeHelpers
             .ToImmutableDictionary(m => m.Name, m => m, StringComparer.Ordinal);
 
     /// <summary>
-    /// 返回类型 T 的描述字典, 以成员名称为键, 名称按序号比较并区分大小写
+    /// 返回类型 <typeparamref name="T"/> 的描述字典, 以成员名称为键, 名称按序号比较并区分大小写
     /// </summary>
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static ImmutableDictionary<string, ReflectionMember> GetMembersDictionary<T>(

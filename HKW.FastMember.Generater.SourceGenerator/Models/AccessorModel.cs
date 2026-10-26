@@ -6,6 +6,7 @@ namespace HKW.FastMember.Generater.SourceGenerator.Models;
 
 internal sealed class MemberModel
 {
+#pragma warning disable S107
     internal MemberModel(
         string name,
         string type,
@@ -17,6 +18,7 @@ internal sealed class MemberModel
         string effectiveType,
         bool allowNull
     )
+#pragma warning restore S107
     {
         Name = name;
         Type = type;
@@ -58,7 +60,7 @@ internal sealed class AccessorModel : IEquatable<AccessorModel>
     public bool Equals(AccessorModel? other) =>
         other != null && Identity == other.Identity && Source == other.Source;
 
-    public override bool Equals(object? obj) => obj is AccessorModel other && Equals(other);
+    public override bool Equals(object? obj) => Equals(obj as AccessorModel);
 
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Identity);
 }

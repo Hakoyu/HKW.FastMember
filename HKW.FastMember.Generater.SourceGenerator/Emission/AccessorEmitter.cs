@@ -10,9 +10,6 @@ namespace HKW.FastMember.Generater.SourceGenerator.Emission;
 
 internal static class AccessorEmitter
 {
-    internal const string GeneratedCodeAttribute =
-        "[global::System.CodeDom.Compiler.GeneratedCode(\"HKW.FastMember.Generater\", \"0.1.0\")]";
-
     private static string Literal(string value) =>
         Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(value, true);
 
@@ -32,7 +29,7 @@ internal static class AccessorEmitter
         writer.WriteLine("namespace HKW.FastMember.Generater");
         writer.WriteLine("{");
         writer.Indent++;
-        writer.WriteLine(GeneratedCodeAttribute);
+        writer.WriteLine(GeneratorHelper.GeneratedCodeAttributeName);
         writer.WriteLine(
             $"internal sealed class Accessor_{identifier} : global::HKW.FastMember.Abstractions.TypeAccessor<{type}>"
         );

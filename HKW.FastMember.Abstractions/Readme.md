@@ -1,6 +1,6 @@
 # HKW.FastMember.Abstractions
 
-为 .NET 8 和 .NET 10 提供与后端无关的成员访问、不可变元数据，以及共享的同步/异步读取器。
+提供与后端无关的成员访问、不可变元数据，以及共享的同步/异步读取器。
 
 ## 包职责边界
 
@@ -8,13 +8,11 @@
 
 - `HKW.FastMember` → `HKW.FastMember.Abstractions`：反射发现、Emit 和 DLR 后端。
 - `HKW.FastMember.Generater` → `HKW.FastMember.Abstractions`：源生成访问后端，其分析器在包内与运行时程序集分开打包。
-- `HKW.FastMember.Abstractions`：通用契约和读取器实现；不依赖任何后端、Roslyn 或 SourceGeneratorUtils。
-
-各后端互不依赖。本包不执行后端发现、注册查找、成员反射、Emit 或 DLR 绑定。请显式选择后端或提供自定义访问器。公共结果类型位于 `HKW.FastMember.Abstractions`；此次 API 迁移包含破坏性变更，不提供旧命名空间的兼容类型或类型转发。后端命名空间保留各自的创建工厂。
+- `HKW.FastMember.Abstractions`：通用契约和读取器实现；
 
 ## 访问器契约
 
-`TypeAccessor` 支持运行时目标类型，包括装箱值。`TypeAccessor<T> : TypeAccessor`（`where T : class`）新增强类型入口，使用固定的静态 `T` 契约，而不是实例的派生类型。两者均公开不可变的 `TargetType`、`GetMembersSupported`、`CreateNewSupported` 和 `ContractVersion`，并通过 `GetMembers()` 和 `GetMemberDictionary()` 提供只读元数据快照。两者均不提供自动发现后端的工厂。
+`TypeAccessor` 支持运行时目标类型，包括装箱值。`TypeAccessor<T> : TypeAccessor`（`where T : class`）新增强类型入口，使用固定的静态 `T` 契约，而不是实例的派生类型。两者均公开不可变的 `TargetType`、`GetMembersSupported`、`CreateNewSupported` 和 `ContractVersion`，并通过 `GetMembers()` 和 `GetMemberDictionary()` 提供只读元数据快照。
 
 实现应提供名称唯一且按 `StringComparer.Ordinal` 名称顺序排列的描述符。非泛型实现重写 `GetValueCore(object, int)`、`SetValueCore(object, int, object?)`，并可选择重写 `CreateNewCore()`。泛型实现则重写 `GetValueTypedCore(T, int)`、`SetValueTypedCore(T, int, object?)`，并可选择重写 `CreateNewTypedCore()`。通用静态成员入口在调用基于索引的核心方法之前，执行一次名称查找并检查权限。
 
@@ -24,7 +22,7 @@
 
 ## 元数据与绑定对象
 
-`Member` 是纯描述符，具有不可变的 `Name`、`Type`、`Ordinal`、`CanRead`、`CanWrite`、`DeclaringIdentity`、`EffectiveType` 和 `AllowDBNull` 属性。它不包含 `MemberInfo` 或特性发现 API。子类可携带后端特有的信息，而不改变通用属性。有效类型和可空性由后端提供，而非由本包发现。
+`Member` 是纯描述符，具有不可变的 `Name`、`Type`、`Ordinal`、`CanRead`、`CanWrite`、`DeclaringIdentity`、`EffectiveType` 和 `AllowDBNull` 属性。子类可携带后端特有的信息，而不改变通用属性。有效类型和可空性由后端提供，而非由本包发现。
 
 `HKW.FastMember.Abstractions.OrdinalAttribute` 是属性和字段唯一的共享排序特性。请将旧命名空间的导入迁移至此特性；不提供旧版特性的别名。
 
@@ -53,9 +51,3 @@ API 参数顺序为**源、访问器、可选取消令牌，最后是 `params st
 省略列名时，选择可读成员，先按序号再按名称排序。显式指定的列保留顺序和重复项；未知或不可读的列会在创建时被拒绝。列名数组或列名为 null 时会被拒绝。即使数据源为空，也无需枚举即可获取架构信息。创建时的取消令牌会传递给异步枚举器；每次读取的令牌会在读取前检查。对异步源执行同步操作可能会阻塞。
 
 `GetMembersSupported == false` 的访问器无法直接传递给通用泛型读取器工厂，即使显式指定列名也不行。必须先由后端特定的列适配器提供固定的可读架构。显式 DLR 列的适配由反射后端负责；本包不会发现动态列，也不会合并运行时行类型的架构。
-
-## 验证与发布状态
-
-开发版本：**0.1.0**。验证范围仅限于 **net8.0 和 net10.0 两个目标框架的单元测试**。包创建/使用（`pack`）、基准测试、裁剪/AOT 发布、部署、SDK 宿主矩阵、持续集成和 NuGet 发布均未在此次验证中得到验证。
-
-`Member.EffectiveType` 携带 `DynamicallyAccessedMembers` 注解，用于读取器字段类型的元数据流。这些注解和通过的单元测试并不能证明裁剪或 Native AOT 兼容性。反射部署约束仍限定在后端边界，而不会施加于所有通用 API。

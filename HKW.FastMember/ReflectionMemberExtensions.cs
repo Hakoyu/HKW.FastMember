@@ -12,6 +12,7 @@ public static class ReflectionMemberExtensions
     /// <summary>
     /// 获取显式反射描述；若描述来自其他后端, 则拒绝该操作
     /// </summary>
+    /// <exception cref="NotSupportedException"><paramref name="member"/> 是 <see cref="ReflectionMember"/> 类型</exception>
     public static ReflectionMember AsReflectionMember(this Member member)
     {
         ArgumentNullException.ThrowIfNull(member);
@@ -35,7 +36,7 @@ public static class ReflectionMemberExtensions
         Attribute.IsDefined(member.GetMemberInfo(), attributeType, inherit);
 
     /// <summary>
-    /// 检查反射成员是否声明了类型为 T 的特性
+    /// 检查反射成员是否声明了类型为 <typeparamref name="T"/> 的特性
     /// </summary>
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static bool IsDefined<T>(this Member member, bool inherit = false)
@@ -52,7 +53,7 @@ public static class ReflectionMemberExtensions
     ) => Attribute.GetCustomAttribute(member.GetMemberInfo(), attributeType, inherit);
 
     /// <summary>
-    /// 从反射成员读取类型为 T 的特性
+    /// 从反射成员读取类型为 <typeparamref name="T"/> 的特性
     /// </summary>
     [RequiresUnreferencedCode(DeploymentRequirements.UnreferencedCode)]
     public static T? GetAttribute<T>(this Member member, bool inherit = false)

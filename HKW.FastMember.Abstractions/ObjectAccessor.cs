@@ -11,7 +11,7 @@ public class ObjectAccessor
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(accessor);
-        if (!accessor.TargetType.IsInstanceOfType(source))
+        if (accessor.TargetType.IsInstanceOfType(source) is false)
             throw new ArgumentException(
                 "The source must be compatible with the accessor's target type.",
                 nameof(source)

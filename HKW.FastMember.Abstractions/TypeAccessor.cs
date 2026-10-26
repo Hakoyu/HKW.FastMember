@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 
 namespace HKW.FastMember.Abstractions;
@@ -7,9 +9,9 @@ namespace HKW.FastMember.Abstractions;
 /// </summary>
 public abstract class TypeAccessor
 {
-    private readonly ReadOnlyCollection<Member> _members;
-    private readonly ReadOnlyDictionary<string, Member> _memberDictionary;
-    private readonly Dictionary<string, int> _indices;
+    private readonly ImmutableArray<Member> _members;
+    private readonly FrozenDictionary<string, Member> _memberDictionary;
+    private readonly FrozenDictionary<string, int> _indices;
 
     /// <summary>
     /// 按名称的序号比较顺序生成描述符快照, 名称必须唯一, 核心索引遵循该顺序
@@ -25,7 +27,7 @@ public abstract class TypeAccessor
         ArgumentNullException.ThrowIfNull(targetType);
         ArgumentNullException.ThrowIfNull(members);
         var snapshot = members.ToArray();
-        _indices = new(StringComparer.Ordinal);
+        var indices = new Dictionary<string, int>(StringComparer.Ordinal);
         var dictionary = new Dictionary<string, Member>(StringComparer.Ordinal);
         for (var index = 0; index < snapshot.Length; index++)
         {
@@ -40,10 +42,11 @@ public abstract class TypeAccessor
                     nameof(members)
                 );
             dictionary.Add(member.Name, member);
-            _indices.Add(member.Name, index);
+            indices.Add(member.Name, index);
         }
-        _members = Array.AsReadOnly(snapshot);
-        _memberDictionary = new(dictionary);
+        _indices = indices.ToFrozenDictionary();
+        _members = snapshot.ToImmutableArray();
+        _memberDictionary = dictionary.ToFrozenDictionary();
         TargetType = targetType;
         CreateNewSupported = createNewSupported;
         ContractVersion = contractVersion;
@@ -92,7 +95,7 @@ public abstract class TypeAccessor
         }
         set
         {
-            if (!TrySetValue(target, name, value))
+            if (TrySetValue(target, name, value) is false)
                 throw new ArgumentOutOfRangeException(
                     nameof(name),
                     name,
@@ -124,7 +127,7 @@ public abstract class TypeAccessor
     {
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(name);
-        if (!_indices.TryGetValue(name, out var index) || !_members[index].CanWrite)
+        if (_indices.TryGetValue(name, out var index) is false || _members[index].CanWrite is false)
             return false;
         SetValueCore(target, index, value);
         return true;

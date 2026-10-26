@@ -26,15 +26,15 @@ public abstract class TypeAccessor<T> : TypeAccessor
 
     public object? this[T target, string name]
     {
-        get => ((TypeAccessor)this)[target, name];
-        set => ((TypeAccessor)this)[target, name] = value;
+        get => base[target, name];
+        set => base[target, name] = value;
     }
 
     public bool TryGetValue(T target, string name, out object? value) =>
-        ((TypeAccessor)this).TryGetValue(target, name, out value);
+        base.TryGetValue(target, name, out value);
 
     public bool TrySetValue(T target, string name, object? value) =>
-        ((TypeAccessor)this).TrySetValue(target, name, value);
+        base.TrySetValue(target, name, value);
 
     public new T CreateNew() => (T)base.CreateNew();
 

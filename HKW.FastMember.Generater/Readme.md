@@ -1,10 +1,6 @@
 # HKW.FastMember.Generater
 
-编译期源生成成员访问后端，目标框架为 **net8.0 / net10.0**。NuGet 包名与工厂命名空间均为 `HKW.FastMember.Generater`，开发版本 `0.1.0`。
-
-一个后端包包含运行时程序集和 Roslyn 生成器，正常依赖 [HKW.FastMember.Abstractions](../HKW.FastMember.Abstractions/Readme.md)，不引用反射后端 `HKW.FastMember`。公共访问器、`Member`、`OrdinalAttribute` 及唯一的同步/异步读取器实现位于 `Abstractions`；本包只保留工厂、生成访问核心和注册。这是公共类型命名空间的破坏性重构，不提供旧类型转发。访问代码由消费者的具体类型调用触发生成，**没有 `Reflection.Emit`、动态语言运行时、反射成员访问或 `Expression.Compile` 后备**。
-
-> 当前验收范围仅为双目标框架单元测试（含 `GeneratorDriver` 输出编译和运行）。实际 `.nupkg` 包消费、SDK 宿主矩阵、裁剪、NativeAOT 发布和性能尚未验证，不承诺预先编译安全性或比 `Emit` 更快。此变更不会发布 NuGet 包。
+一个后端包包含运行时程序集和 Roslyn 生成器，正常依赖 [HKW.FastMember.Abstractions](../HKW.FastMember.Abstractions/Readme.md)。
 
 ## 泛型访问器
 
@@ -99,11 +95,6 @@ while (await asyncReader.ReadAsync(cancellationToken))
 
 ## 单元测试
 
-在仓库根目录使用现有 MSTest/VSTest 运行方式：
-
 ```powershell
 dotnet test .\HKW.FastMember.Generater.Tests\HKW.FastMember.Generater.Tests.csproj -c Release -p:GeneratePackageOnBuild=false
 ```
-
-默认运行 net8.0 与 net10.0。测试覆盖生成代码、诊断、访问器、注册、同步/异步读取器工厂及双后端一致性；只有测试项目为一致性验证引用反射后端。
-
