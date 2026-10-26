@@ -13,6 +13,16 @@
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <Deterministic>true</Deterministic>
+    <PathMap Condition="'$(SolutionDir)' != ''">$(SolutionDir)=/_/</PathMap>
+    <PathMap Condition="'$(SolutionDir)' == ''"
+      >$(MSBuildProjectDirectory)=/_/$(AssemblyName)/</PathMap
+    >
+  </PropertyGroup>
+
   <ItemGroup>
     <None Include="..\LICENSE.txt" Pack="true" PackagePath="/" />
     <None Include="Readme.md" Pack="true" PackagePath="/" />
