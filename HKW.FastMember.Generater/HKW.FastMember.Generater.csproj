@@ -13,6 +13,16 @@
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <Deterministic>true</Deterministic>
+    <PathMap Condition="'$(SolutionDir)' != ''">$(SolutionDir)=/_/</PathMap>
+    <PathMap Condition="'$(SolutionDir)' == ''"
+      >$(MSBuildProjectDirectory)=/_/$(AssemblyName)/</PathMap
+    >
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\HKW.FastMember.Abstractions\HKW.FastMember.Abstractions.csproj" />
     <ProjectReference
